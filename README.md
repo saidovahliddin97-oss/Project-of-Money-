@@ -13,6 +13,7 @@ PDF/CSV-выписка → Excel, CSV, QuickBooks Online CSV, Xero CSV, QIF, OFX
 - [docs/DEPLOY.md](docs/DEPLOY.md) — пошаговый деплой (Cloudflare Pages), lava.top, Telegram-уведомления
 - [docs/MARKETING.md](docs/MARKETING.md) — позиционирование, тексты, письма, план на 14 дней, метрики
 - [docs/ECONOMICS.md](docs/ECONOMICS.md) — юнит-экономика и сценарии
+- [docs/TEST-REPORT.md](docs/TEST-REPORT.md) — что протестировано и что нет
 
 ## Возможности (реализовано и протестировано)
 
