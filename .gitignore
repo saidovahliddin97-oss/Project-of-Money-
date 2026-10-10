@@ -1,0 +1,12 @@
+node_modules/
+.secrets/
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+.vercel/
+tests/fixtures/pdf/
+tests/e2e/output/
+*.log
+.DS_Store

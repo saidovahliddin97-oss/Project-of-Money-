@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How to convert a PDF bank statement to Excel (without retyping) | LocalLedger</title>
+  <meta name="description" content="Three ways to get transactions from a PDF bank statement into Excel or Google Sheets, what goes wrong with copy-paste, and how to check the result against your balances.">
+  <link rel="canonical" href="https://localledger.pages.dev/guides/convert-pdf-bank-statement-to-excel.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="How to convert a PDF bank statement to Excel (without retyping) | LocalLedger">
+  <meta property="og:description" content="Three ways to get transactions from a PDF bank statement into Excel or Google Sheets, what goes wrong with copy-paste, and how to check the result against your balances.">
+  <meta property="og:image" content="https://localledger.pages.dev/assets/img/og.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to convert a PDF bank statement to Excel (without retyping)","description":"Three ways to get transactions from a PDF bank statement into Excel or Google Sheets, what goes wrong with copy-paste, and how to check the result against your balances.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"LocalLedger"}}</script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="/guides/">Guides</a>
+      <a href="/#pricing">Pricing</a>
+      <a class="btn btn-small" href="/app.html">Open converter</a>
+    </nav>
+  </header>
+  <main class="container narrow article">
+    <p class="crumbs"><a href="/">Home</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to convert a PDF bank statement to Excel (without retyping)</h1>
+    <p class="muted">Updated 2026-10-10</p>
+
+<p>Banks love PDFs; spreadsheets do not. If you need last year's transactions in Excel for a budget, a tax return, a loan application or a bookkeeping catch-up, you have three realistic options.</p>
+<h2>Option 1: Download a CSV or Excel file from online banking</h2>
+<p>Before converting anything, check whether your bank offers an export. Look for <em>Download</em>, <em>Export</em> or <em>Statements &amp; documents</em> in online banking. Many banks let you export CSV for recent months only — older history is often available just as PDF statements, which is why converters exist.</p>
+<h2>Option 2: Copy and paste from the PDF</h2>
+<p>Works for a page or two. In practice you will usually hit these problems:</p>
+<ul>
+  <li>Columns collapse into one cell, or every word lands in its own cell.</li>
+  <li>Descriptions that wrap onto a second line become separate rows.</li>
+  <li>Debits and credits sit in separate columns, so you have to build a signed amount yourself.</li>
+  <li>Dates without a year (<code>01/05</code>) or in day-first format are misread by Excel.</li>
+  <li>Page headers and footers ("Page 2 of 6", "continued") end up in the middle of your data.</li>
+</ul>
+<h2>Option 3: Use a statement converter</h2>
+<p>A converter reads the layout of the page — where the date, description, amount and balance columns are — and rebuilds proper rows. What to look for:</p>
+<ul>
+  <li><strong>Where your file goes.</strong> Most online converters upload the statement to their server. LocalLedger processes it inside your browser instead, so the file never leaves your computer.</li>
+  <li><strong>Signed amounts.</strong> You want one Amount column where money out is negative, plus optional Money In / Money Out columns.</li>
+  <li><strong>A totals check.</strong> If opening balance + transactions ≠ closing balance, a row was missed or misread.</li>
+  <li><strong>Editing before export.</strong> No converter is perfect on every layout; being able to fix a row beats re-doing the file.</li>
+</ul>
+<h2>Step by step with LocalLedger</h2>
+<ol>
+  <li>Open the <a href="/app.html">converter</a> and drop one or more PDF statements on it.</li>
+  <li>Check the file summary: it shows how many transactions were found and whether they reconcile with the statement balances.</li>
+  <li>Review the table. Rows highlighted in yellow had no sign in the statement — confirm them or use the ± button.</li>
+  <li>Choose <strong>Excel (.xlsx)</strong> and press <strong>Download</strong>. Dates are real Excel dates and amounts are numbers, so you can sort, filter and build pivot tables immediately.</li>
+</ol>
+<h2>Scanned statements</h2>
+<p>If you cannot select text in the PDF, it is an image (a scan or a photo). Text-based converters, including LocalLedger, cannot read it; you would need OCR software first. Statements downloaded from online banking are almost always text-based.</p>
+
+<div class="cta-box">
+  <p><strong>Try it with your own statement.</strong> LocalLedger reads the PDF or CSV in your browser, shows every transaction for review and checks the totals against the statement balances.</p>
+  <a class="btn" href="/app.html">Convert your statement now — free preview, nothing uploaded</a>
+</div>
+<h2>Related guides</h2>
+<ul>
+  <li><a href="/guides/import-bank-statement-into-quickbooks-online.html">How to import a bank statement into QuickBooks Online (CSV, step by step)</a></li>
+  <li><a href="/guides/import-bank-statement-into-xero.html">How to import a bank statement into Xero from a PDF or CSV</a></li>
+  <li><a href="/guides/convert-csv-to-qif.html">Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps</a></li>
+  <li><a href="/guides/convert-csv-to-ofx.html">Convert a bank CSV or PDF statement to OFX</a></li>
+</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 LocalLedger</span>
+      <span><a href="/guides/">Guides</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a></span>
+    </div>
+  </footer>
+</body>
+</html>

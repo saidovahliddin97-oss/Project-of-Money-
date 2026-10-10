@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payment received — LocalLedger</title>
+  <meta name="description" content="Your LocalLedger Pro license.">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <meta name="robots" content="noindex">
+  <script type="module" src="/assets/js/success.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="/guides/">Guides</a>
+      <a href="/#pricing">Pricing</a>
+      <a class="btn btn-small" href="/app.html">Open converter</a>
+    </nav>
+  </header>
+  <main class="container narrow article">
+    <section data-state="checking">
+      <h1>Confirming your payment…</h1>
+      <p id="checking-msg" class="muted">Checking with the payment provider. This usually takes a few seconds.</p>
+    </section>
+    <section data-state="done" hidden>
+      <h1>Thank you — Pro is unlocked 🎉</h1>
+      <p>Your license for <strong id="license-email"></strong> is active in this browser. <strong>Save the key below</strong> (for example in your password manager) to unlock Pro on another computer.</p>
+      <textarea id="license" class="license-box" rows="4" readonly aria-label="Your license key"></textarea>
+      <p><button type="button" id="copy" class="btn btn-ghost btn-small">Copy key</button></p>
+      <p><a class="btn" href="/app.html">Go to the converter</a></p>
+    </section>
+    <section data-state="error" hidden>
+      <h1>We could not confirm the payment yet</h1>
+      <p id="error-msg" class="error"></p>
+      <p><button type="button" id="retry" class="btn">Check again</button></p>
+      <p class="muted">If you were charged and this page keeps failing, contact support with your payment receipt — we will send your key by hand.</p>
+    </section>
+    <section data-state="manual" hidden>
+      <h1>Retrieve your license</h1>
+      <p class="muted">This browser has no pending order. If you paid on another device, enter the order id from your lava.top receipt.</p>
+      <form id="manual-form" class="stack">
+        <label>Order id
+          <input name="order" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+        </label>
+        <button type="submit" class="btn">Get my license</button>
+        <p id="manual-msg" class="error" role="alert"></p>
+      </form>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 LocalLedger</span>
+      <span><a href="/guides/">Guides</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a></span>
+    </div>
+  </footer>
+</body>
+</html>

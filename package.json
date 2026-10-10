@@ -1,0 +1,29 @@
+{
+  "name": "localledger",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LocalLedger — convert bank statements (PDF/CSV) to CSV, Excel, QIF, OFX, QuickBooks and Xero formats, 100% in the browser.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "postinstall": "node scripts/vendor.mjs",
+    "keys": "node scripts/gen-keys.mjs",
+    "issue-license": "node scripts/issue-license.mjs",
+    "fixtures": "node tests/fixtures/make-pdfs.mjs",
+    "test": "node --test \"tests/unit/**/*.test.mjs\"",
+    "test:e2e": "node tests/e2e/run-e2e.mjs",
+    "dev": "node scripts/dev-server.mjs 8787",
+    "dev:cf": "npx wrangler@4.139.0 pages dev public",
+    "guides": "node scripts/build-guides.mjs",
+    "lava:products": "node scripts/lava-products.mjs"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.3.289"
+  },
+  "devDependencies": {
+    "pdf-lib": "1.17.1"
+  }
+}

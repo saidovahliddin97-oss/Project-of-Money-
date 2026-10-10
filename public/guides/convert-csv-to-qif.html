@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps | LocalLedger</title>
+  <meta name="description" content="What a QIF file is, which apps still import it, and how to turn a bank CSV or PDF statement into a valid QIF file.">
+  <link rel="canonical" href="https://localledger.pages.dev/guides/convert-csv-to-qif.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps | LocalLedger">
+  <meta property="og:description" content="What a QIF file is, which apps still import it, and how to turn a bank CSV or PDF statement into a valid QIF file.">
+  <meta property="og:image" content="https://localledger.pages.dev/assets/img/og.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps","description":"What a QIF file is, which apps still import it, and how to turn a bank CSV or PDF statement into a valid QIF file.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"LocalLedger"}}</script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="/guides/">Guides</a>
+      <a href="/#pricing">Pricing</a>
+      <a class="btn btn-small" href="/app.html">Open converter</a>
+    </nav>
+  </header>
+  <main class="container narrow article">
+    <p class="crumbs"><a href="/">Home</a> › <a href="/guides/">Guides</a></p>
+    <h1>Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps</h1>
+    <p class="muted">Updated 2026-10-10</p>
+
+<p>QIF (Quicken Interchange Format) is an old, plain-text format for transactions. It is still useful because many personal-finance programs import it: GnuCash, Moneydance, Banktivity, HomeBank and older or specific versions of Quicken among them. Check your program's import documentation for which account types accept QIF.</p>
+<h2>What a QIF file looks like</h2>
+<pre>!Type:Bank
+D01/05/2026
+T-4.50
+PCOFFEE HOUSE
+MCOFFEE HOUSE #123 SEATTLE WA
+^</pre>
+<p><code>D</code> is the date, <code>T</code> the signed amount, <code>P</code> the payee, <code>M</code> a memo, and <code>^</code> ends each transaction. Credit card files start with <code>!Type:CCard</code>.</p>
+<h2>Converting a CSV or PDF statement to QIF</h2>
+<ol>
+  <li>Open the <a href="/app.html">converter</a> and drop your bank CSV export or PDF statement.</li>
+  <li>For CSV files, LocalLedger maps the Date, Description, Amount (or Debit/Credit) columns automatically. Check the preview.</li>
+  <li>Choose <strong>QIF</strong> and download. Card statements are written as <code>CCard</code>, bank statements as <code>Bank</code>.</li>
+</ol>
+<h2>Common QIF problems</h2>
+<ul>
+  <li><strong>Day/month swapped:</strong> QIF has no date-format header. LocalLedger writes <code>MM/DD/YYYY</code> by default; choose <code>DD/MM/YYYY</code> under Options if your program expects that.</li>
+  <li><strong>Duplicates:</strong> QIF has no transaction ids, so importing the same file twice usually duplicates rows. Prefer OFX if your program supports it.</li>
+  <li><strong>Wrong account type:</strong> some programs only accept QIF into specific account types or into a new file — check their help pages.</li>
+</ul>
+
+<div class="cta-box">
+  <p><strong>Try it with your own statement.</strong> LocalLedger reads the PDF or CSV in your browser, shows every transaction for review and checks the totals against the statement balances.</p>
+  <a class="btn" href="/app.html">Convert your statement now — free preview, nothing uploaded</a>
+</div>
+<h2>Related guides</h2>
+<ul>
+  <li><a href="/guides/convert-pdf-bank-statement-to-excel.html">How to convert a PDF bank statement to Excel (without retyping)</a></li>
+  <li><a href="/guides/import-bank-statement-into-quickbooks-online.html">How to import a bank statement into QuickBooks Online (CSV, step by step)</a></li>
+  <li><a href="/guides/import-bank-statement-into-xero.html">How to import a bank statement into Xero from a PDF or CSV</a></li>
+  <li><a href="/guides/convert-csv-to-ofx.html">Convert a bank CSV or PDF statement to OFX</a></li>
+</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 LocalLedger</span>
+      <span><a href="/guides/">Guides</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a></span>
+    </div>
+  </footer>
+</body>
+</html>

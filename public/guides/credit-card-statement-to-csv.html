@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Credit card statement to CSV: getting the signs right | LocalLedger</title>
+  <meta name="description" content="Why credit card statements show purchases as positive numbers, and how to convert a card statement PDF to CSV with correct money-in / money-out signs for accounting software.">
+  <link rel="canonical" href="https://localledger.pages.dev/guides/credit-card-statement-to-csv.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Credit card statement to CSV: getting the signs right | LocalLedger">
+  <meta property="og:description" content="Why credit card statements show purchases as positive numbers, and how to convert a card statement PDF to CSV with correct money-in / money-out signs for accounting software.">
+  <meta property="og:image" content="https://localledger.pages.dev/assets/img/og.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Credit card statement to CSV: getting the signs right","description":"Why credit card statements show purchases as positive numbers, and how to convert a card statement PDF to CSV with correct money-in / money-out signs for accounting software.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"LocalLedger"}}</script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="/guides/">Guides</a>
+      <a href="/#pricing">Pricing</a>
+      <a class="btn btn-small" href="/app.html">Open converter</a>
+    </nav>
+  </header>
+  <main class="container narrow article">
+    <p class="crumbs"><a href="/">Home</a> › <a href="/guides/">Guides</a></p>
+    <h1>Credit card statement to CSV: getting the signs right</h1>
+    <p class="muted">Updated 2026-10-10</p>
+
+<p>Credit card statements are written from the card issuer's point of view: a purchase <em>increases</em> what you owe, so it is printed as a positive number, and a payment is printed as negative (or marked CR). Accounting and budgeting tools usually want the opposite: purchases are money out (negative), payments and refunds are money in (positive).</p>
+<h2>How LocalLedger handles it</h2>
+<ul>
+  <li>It recognises card statements from phrases like "credit limit", "minimum payment" or "new balance" and flips the signs automatically.</li>
+  <li>You can force the statement type under <em>Options → Statement type</em>.</li>
+  <li>The totals check works the card way round: previous balance + purchases − payments = new balance.</li>
+  <li>If your target app wants the issuer's convention, use <strong>Flip all signs</strong> before exporting.</li>
+</ul>
+<h2>Trans date vs post date</h2>
+<p>Many card statements print two dates. LocalLedger uses the first (transaction) date and ignores the posting date.</p>
+<h2>Steps</h2>
+<ol>
+  <li>Drop the card statement PDF into the <a href="/app.html">converter</a>.</li>
+  <li>Confirm the file is detected as "credit card" and that the balances reconcile.</li>
+  <li>Export CSV, Excel, QuickBooks Online CSV, Xero CSV, QIF (<code>!Type:CCard</code>) or OFX (credit card statement).</li>
+</ol>
+
+<div class="cta-box">
+  <p><strong>Try it with your own statement.</strong> LocalLedger reads the PDF or CSV in your browser, shows every transaction for review and checks the totals against the statement balances.</p>
+  <a class="btn" href="/app.html">Convert your statement now — free preview, nothing uploaded</a>
+</div>
+<h2>Related guides</h2>
+<ul>
+  <li><a href="/guides/convert-pdf-bank-statement-to-excel.html">How to convert a PDF bank statement to Excel (without retyping)</a></li>
+  <li><a href="/guides/import-bank-statement-into-quickbooks-online.html">How to import a bank statement into QuickBooks Online (CSV, step by step)</a></li>
+  <li><a href="/guides/import-bank-statement-into-xero.html">How to import a bank statement into Xero from a PDF or CSV</a></li>
+  <li><a href="/guides/convert-csv-to-qif.html">Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps</a></li>
+</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 LocalLedger</span>
+      <span><a href="/guides/">Guides</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a></span>
+    </div>
+  </footer>
+</body>
+</html>

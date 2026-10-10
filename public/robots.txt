@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /setup.html
+Disallow: /success.html
+Disallow: /cancel.html
+Sitemap: https://localledger.pages.dev/sitemap.xml

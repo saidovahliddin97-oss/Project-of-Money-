@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LocalLedger — Bank statement converter that never uploads your files</title>
+  <meta name="description" content="Convert PDF bank and credit card statements to Excel, CSV, QuickBooks, Xero, QIF or OFX in seconds. Runs 100% in your browser — your financial data never leaves your computer. One-time price, no subscription.">
+  <link rel="canonical" href="/">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="LocalLedger — private bank statement converter">
+  <meta property="og:description" content="PDF/CSV statements → Excel, CSV, QuickBooks, Xero, QIF, OFX. Processed on your device, never uploaded.">
+  <meta property="og:image" content="/assets/img/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "LocalLedger",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web browser",
+    "description": "Convert PDF and CSV bank statements to Excel, CSV, QuickBooks Online, Xero, QIF and OFX locally in the browser.",
+    "offers": { "@type": "Offer", "price": "29.00", "priceCurrency": "USD" }
+  }
+  </script>
+  <script type="module" src="/assets/js/landing.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="/guides/">Guides</a>
+      <a href="#pricing">Pricing</a>
+      <a class="btn btn-small" href="/app.html">Open converter</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="container hero">
+      <div>
+        <h1>Bank statements to Excel, QuickBooks &amp; Xero — without uploading them anywhere</h1>
+        <p class="lead">Drop a PDF or CSV statement and get clean, reviewable transactions in seconds. LocalLedger runs entirely in your browser, so account numbers and balances never touch a server.</p>
+        <div class="hero-cta">
+          <a class="btn btn-large" href="/app.html">Convert a statement — free</a>
+          <a href="/app.html#sample" class="muted">or try a sample file</a>
+        </div>
+        <p class="hero-proof">No sign-up · Free preview of every file · Pro is a one-time $29</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="pdfmock">01/02  PAYROLL DEPOSIT ACME CORP     3,200.00   5,700.00
+01/03  RENT PAYMENT ONLINE TRANSFER -1,800.00   3,900.00
+       REF 99812 CONFIRMATION 5512
+01/05  COFFEE HOUSE #123 SEATTLE WA     -4.50   3,895.50</div>
+        <p class="arrow">↓ LocalLedger ↓</p>
+        <table>
+          <tr><td>2026-01-02</td><td>PAYROLL DEPOSIT ACME CORP</td><td class="pos">3,200.00</td></tr>
+          <tr><td>2026-01-03</td><td>RENT PAYMENT ONLINE TRANSFER REF 99812…</td><td class="neg">-1,800.00</td></tr>
+          <tr><td>2026-01-05</td><td>COFFEE HOUSE #123 SEATTLE WA</td><td class="neg">-4.50</td></tr>
+        </table>
+        <p class="arrow">✓ Balances reconcile: 2,500.00 → 3,498.18</p>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="container">
+        <h2>Built for people who handle other people's money</h2>
+        <div class="cards">
+          <div class="card"><h3>Bookkeepers &amp; accountants</h3><p>Catch up a client's year from PDF statements without retyping or sending their data to yet another cloud service.</p></div>
+          <div class="card"><h3>Small business owners</h3><p>Import missing months into QuickBooks Online or Xero when the bank feed broke or never covered them.</p></div>
+          <div class="card"><h3>Quicken, GnuCash &amp; YNAB users</h3><p>Turn statements and bank CSV exports into QIF or OFX files your personal finance app can read.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="how">
+      <div class="container">
+        <h2>How it works</h2>
+        <ol class="steps">
+          <li><h3>Drop your statements</h3><p class="muted">Text-based PDFs from online banking or CSV exports. Several files and password-protected PDFs work too.</p></li>
+          <li><h3>Review in a table</h3><p class="muted">Dates, descriptions and signed amounts are detected for you. We check that the transactions add up to the statement's opening and closing balance.</p></li>
+          <li><h3>Export</h3><p class="muted">Download Excel, CSV, a QuickBooks Online or Xero import file, QIF or OFX — ready to import.</p></li>
+        </ol>
+        <h3 class="mt">Export formats</h3>
+        <ul class="formats">
+          <li>Excel (.xlsx)</li><li>CSV</li><li>QuickBooks Online CSV</li><li>Xero CSV</li><li>QIF</li><li>OFX</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section-alt">
+      <div class="container">
+        <h2>Why "local" matters</h2>
+        <div class="cards">
+          <div class="card"><h3>Nothing to leak</h3><p>Most converters upload your statement to their servers. LocalLedger reads it with code running in your own browser tab. You can even disconnect from the internet after the page loads.</p></div>
+          <div class="card"><h3>Checks its own work</h3><p>When a statement prints opening and closing balances, LocalLedger reconciles every row against them and tells you if something does not add up.</p></div>
+          <div class="card"><h3>You stay in control</h3><p>Every row is editable before export: fix a description, flip a sign, delete a fee, add a missing line.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pricing">
+      <div class="container">
+        <h2 class="center">Simple pricing</h2>
+        <p class="muted center">Convert and preview any statement for free. Pay once when you need full exports.</p>
+        <div class="pricing">
+          <div class="price-card">
+            <h3>Free</h3>
+            <div class="price">$0</div>
+            <ul>
+              <li>Unlimited files and preview</li>
+              <li>Balance reconciliation</li>
+              <li>Export up to 15 transactions per download</li>
+              <li>All formats</li>
+            </ul>
+            <a class="btn btn-ghost btn-wide" href="/app.html">Start converting</a>
+          </div>
+          <div class="price-card featured">
+            <h3>Pro — lifetime</h3>
+            <div class="price">$29 <small>one-time</small></div>
+            <ul>
+              <li>Unlimited transactions per export</li>
+              <li>Excel, CSV, QuickBooks, Xero, QIF, OFX</li>
+              <li>All future improvements of version 1</li>
+              <li>14-day money-back guarantee</li>
+            </ul>
+            <button type="button" class="btn btn-wide" id="buy-btn">Get Pro</button>
+          </div>
+        </div>
+        <table class="compare">
+          <thead><tr><th></th><th>LocalLedger</th><th>Typical cloud converters</th></tr></thead>
+          <tbody>
+            <tr><td>Where your statement is processed</td><td>Your browser</td><td>Their servers</td></tr>
+            <tr><td>Price</td><td>$29 once</td><td>Monthly subscription</td></tr>
+            <tr><td>Scanned / photographed statements (OCR)</td><td>Not yet</td><td>Often yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="section section-alt faq">
+      <div class="container narrow">
+        <h2>Questions</h2>
+        <details><summary>Is my statement really not uploaded?</summary><p>Yes. The converter is a web page that runs JavaScript in your browser. The PDF is read with the open-source pdf.js library on your device. The only network requests the app makes are anonymous usage counters (for example "a file was converted" — never the file, its contents or your name) and, if you buy, the checkout.</p></details>
+        <details><summary>Which banks are supported?</summary><p>LocalLedger does not use per-bank templates. It reads the layout of the page — dates, descriptions, amount and balance columns — so it works with most text-based statements from banks and card issuers worldwide. Try your own file for free before paying: the preview shows exactly what you will get.</p></details>
+        <details><summary>Does it work with scanned statements?</summary><p>Not yet. The PDF needs a text layer (if you can select text in it, it will work). Statements downloaded from online banking almost always have one.</p></details>
+        <details><summary>How do I import the result into QuickBooks Online or Xero?</summary><p>Choose the "QuickBooks Online (CSV)" or "Xero (CSV)" export and follow our step-by-step guides for <a href="/guides/import-bank-statement-into-quickbooks-online.html">QuickBooks Online</a> and <a href="/guides/import-bank-statement-into-xero.html">Xero</a>.</p></details>
+        <details><summary>How does the license work?</summary><p>After payment you get a license key tied to your email. It unlocks Pro in your browser; you can paste it on any computer you use. No account or password needed.</p></details>
+        <details><summary>What if it doesn't work for my statement?</summary><p>You can test every file for free before buying. If you buy and it still doesn't work for you, ask for a refund within 14 days.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="pro-dialog" class="dialog">
+    <button type="button" class="dialog-x" data-close aria-label="Close">✕</button>
+    <h3>Get LocalLedger Pro</h3>
+    <p id="pro-reason" class="muted"></p>
+    <ul class="checks">
+      <li>Unlimited transactions and files</li>
+      <li>All formats: Excel, CSV, QuickBooks, Xero, QIF, OFX</li>
+      <li>One-time payment — no subscription</li>
+    </ul>
+    <form id="checkout-form" class="stack">
+      <label>Email for your license key
+        <input name="email" type="email" required autocomplete="email" placeholder="you@company.com">
+      </label>
+      <div class="row">
+        <label>Currency
+          <select id="checkout-currency"><option value="USD">USD</option><option value="EUR">EUR</option></select>
+        </label>
+        <label>Pay with
+          <select name="method"><option value="card">Card / Apple Pay</option><option value="paypal">PayPal</option></select>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-wide">Continue to secure checkout</button>
+      <p class="fine">Pay <strong data-price>$29</strong> once. Payments are processed by lava.top (Lavalane Ltd, Cyprus). 14-day money-back guarantee.</p>
+      <p id="checkout-error" class="error" role="alert"></p>
+    </form>
+    <details class="activate">
+      <summary>Already have a license key?</summary>
+      <form id="activate-form" class="stack">
+        <textarea name="key" rows="3" required placeholder="LL1.…" aria-label="License key"></textarea>
+        <button type="submit" class="btn btn-ghost">Activate</button>
+        <p id="activate-msg" role="status"></p>
+      </form>
+    </details>
+  </dialog>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 LocalLedger</span>
+      <span><a href="/guides/">Guides</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a></span>
+    </div>
+  </footer>
+</body>
+</html>

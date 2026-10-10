@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Owner setup — LocalLedger</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="module" src="/assets/js/setup.js"></script>
+</head>
+<body>
+  <main class="container narrow article">
+    <h1>Owner setup: license signing key</h1>
+    <p>This page is for the site owner. It creates a new key pair <strong>inside this browser</strong> (nothing is sent anywhere). Copy the private key into the <code>LICENSE_PRIVATE_JWK</code> secret of your hosting provider. Do it once: a new key invalidates all previously issued licenses.</p>
+    <p><button type="button" id="gen" class="btn">Generate key pair</button></p>
+    <label>Private key — paste into LICENSE_PRIVATE_JWK (keep it secret)
+      <textarea id="priv" class="license-box" rows="5" readonly></textarea>
+    </label>
+    <p><button type="button" id="copy" class="btn btn-ghost btn-small" disabled>Copy private key</button></p>
+    <h2>Configuration status of this deployment</h2>
+    <pre id="health">Loading…</pre>
+  </main>
+</body>
+</html>

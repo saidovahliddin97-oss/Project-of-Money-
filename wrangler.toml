@@ -1,0 +1,11 @@
+# Cloudflare Pages project config (used by `wrangler pages dev/deploy`).
+name = "localledger"
+pages_build_output_dir = "public"
+compatibility_date = "2026-09-01"
+
+# Optional: KV namespace for webhook idempotency, funnel counters and order log.
+# Create it with `npx wrangler kv namespace create LL_KV` and paste the id here,
+# or bind it in the Cloudflare dashboard (Pages → Settings → Bindings).
+# [[kv_namespaces]]
+# binding = "LL_KV"
+# id = "<your-kv-namespace-id>"

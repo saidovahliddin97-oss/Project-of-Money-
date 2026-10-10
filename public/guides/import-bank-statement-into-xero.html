@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How to import a bank statement into Xero from a PDF or CSV | LocalLedger</title>
+  <meta name="description" content="Get missing statement lines into Xero: prepare a CSV in Xero's layout, import it into the bank account, and reconcile.">
+  <link rel="canonical" href="https://localledger.pages.dev/guides/import-bank-statement-into-xero.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="How to import a bank statement into Xero from a PDF or CSV | LocalLedger">
+  <meta property="og:description" content="Get missing statement lines into Xero: prepare a CSV in Xero's layout, import it into the bank account, and reconcile.">
+  <meta property="og:image" content="https://localledger.pages.dev/assets/img/og.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"How to import a bank statement into Xero from a PDF or CSV","description":"Get missing statement lines into Xero: prepare a CSV in Xero's layout, import it into the bank account, and reconcile.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"LocalLedger"}}</script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="/guides/">Guides</a>
+      <a href="/#pricing">Pricing</a>
+      <a class="btn btn-small" href="/app.html">Open converter</a>
+    </nav>
+  </header>
+  <main class="container narrow article">
+    <p class="crumbs"><a href="/">Home</a> › <a href="/guides/">Guides</a></p>
+    <h1>How to import a bank statement into Xero from a PDF or CSV</h1>
+    <p class="muted">Updated 2026-10-10</p>
+
+<p>Xero lets you import statement lines manually when there is no bank feed, the feed started late, or a period is missing. Xero accepts CSV, OFX, QIF and QBO files. CSV is the most predictable.</p>
+<h2>The CSV layout for Xero</h2>
+<p>Xero's statement template uses these columns: <code>*Date</code>, <code>*Amount</code>, <code>Payee</code>, <code>Description</code>, <code>Reference</code> (plus optional coding columns). Columns marked with * are required. Money out is negative. The date format must match your organisation's regional settings — for most regions outside the US that is <code>DD/MM/YYYY</code>.</p>
+<p>LocalLedger's <strong>Xero (CSV)</strong> export produces exactly these columns, with a payee guessed from the description.</p>
+<h2>Step 1 — Convert the statement</h2>
+<ol>
+  <li>Drop the statement into the <a href="/app.html">converter</a>.</li>
+  <li>Confirm the balances reconcile; fix highlighted rows.</li>
+  <li>Under <em>Options</em>, set the CSV date format to match your Xero organisation.</li>
+  <li>Export <strong>Xero (CSV)</strong>.</li>
+</ol>
+<h2>Step 2 — Import into Xero</h2>
+<ol>
+  <li>In Xero, open <strong>Accounting → Bank accounts</strong>.</li>
+  <li>Find the account, open <strong>Manage account</strong> and choose <strong>Import a statement</strong>.</li>
+  <li>Browse to the CSV file and click <strong>Import</strong>.</li>
+  <li>Assign the columns if Xero asks (Date, Amount, Payee, Description, Reference) and save.</li>
+  <li>The lines appear in the bank account ready to <strong>reconcile</strong>.</li>
+</ol>
+<h2>Tips</h2>
+<ul>
+  <li>Xero warns about lines it has already imported, but it is still safest to import only the missing period.</li>
+  <li>If a statement line is wrong after import, you can delete imported statement lines from the account's statement view and import a corrected file.</li>
+  <li>Keep one file per bank account. Do not mix two accounts in one import.</li>
+</ul>
+
+<div class="cta-box">
+  <p><strong>Try it with your own statement.</strong> LocalLedger reads the PDF or CSV in your browser, shows every transaction for review and checks the totals against the statement balances.</p>
+  <a class="btn" href="/app.html">Convert your statement now — free preview, nothing uploaded</a>
+</div>
+<h2>Related guides</h2>
+<ul>
+  <li><a href="/guides/convert-pdf-bank-statement-to-excel.html">How to convert a PDF bank statement to Excel (without retyping)</a></li>
+  <li><a href="/guides/import-bank-statement-into-quickbooks-online.html">How to import a bank statement into QuickBooks Online (CSV, step by step)</a></li>
+  <li><a href="/guides/convert-csv-to-qif.html">Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps</a></li>
+  <li><a href="/guides/convert-csv-to-ofx.html">Convert a bank CSV or PDF statement to OFX</a></li>
+</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 LocalLedger</span>
+      <span><a href="/guides/">Guides</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a></span>
+    </div>
+  </footer>
+</body>
+</html>

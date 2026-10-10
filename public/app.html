@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Converter — LocalLedger</title>
+  <meta name="description" content="Convert PDF and CSV bank statements to Excel, CSV, QuickBooks, Xero, QIF and OFX in your browser. Files never leave your device.">
+  <link rel="canonical" href="/app.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script type="module" src="/assets/js/app.js"></script>
+</head>
+<body class="app">
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="/guides/">Guides</a>
+      <a href="/#pricing">Pricing</a>
+      <span id="pro-badge" class="badge" hidden>PRO <button type="button" id="signout" class="link small">sign out</button></span>
+      <button type="button" id="upgrade-btn" class="btn btn-small">Get Pro</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section id="drop-section">
+      <label id="dropzone" class="dropzone" for="file-input">
+        <input id="file-input" type="file" accept=".pdf,.csv,.tsv,.txt,application/pdf,text/csv" multiple>
+        <span class="dz-title">Drop bank statements here</span>
+        <span class="dz-sub">PDF (text-based) or CSV · several files at once · up to 25 MB each</span>
+        <span class="btn">Choose files</span>
+      </label>
+      <p class="privacy-note">🔒 Your files are processed <strong>on this device</strong>. Nothing is uploaded. <button type="button" id="btn-sample" class="link">Try a sample statement</button></p>
+
+      <details class="options">
+        <summary>Options</summary>
+        <div class="grid-options">
+          <label>Dates in the statement
+            <select id="opt-date-order">
+              <option value="auto">Detect automatically</option>
+              <option value="MDY">Month first (01/31/2026)</option>
+              <option value="DMY">Day first (31/01/2026)</option>
+            </select>
+          </label>
+          <label>Statement type
+            <select id="opt-kind">
+              <option value="auto">Detect automatically</option>
+              <option value="bank">Bank account</option>
+              <option value="card">Credit card</option>
+            </select>
+          </label>
+          <label>Date format in CSV export
+            <select id="opt-export-date">
+              <option value="MDY">MM/DD/YYYY</option>
+              <option value="DMY">DD/MM/YYYY</option>
+              <option value="ISO">YYYY-MM-DD</option>
+            </select>
+          </label>
+          <label>Currency (OFX)
+            <input id="opt-currency" type="text" value="USD" maxlength="3" autocomplete="off">
+          </label>
+          <label>Account number (OFX, optional)
+            <input id="opt-account" type="text" maxlength="22" autocomplete="off" placeholder="e.g. last 4 digits">
+          </label>
+        </div>
+      </details>
+    </section>
+
+    <section id="files-section" hidden>
+      <h2>Files</h2>
+      <ul id="file-list" class="file-list"></ul>
+    </section>
+
+    <section id="review-section" hidden>
+      <div class="review-head">
+        <h2>Review transactions</h2>
+        <div class="toolbar">
+          <button type="button" id="btn-sort" class="btn btn-ghost btn-small">Sort by date</button>
+          <button type="button" id="btn-dedupe" class="btn btn-ghost btn-small">Remove duplicates</button>
+          <button type="button" id="btn-flip" class="btn btn-ghost btn-small">Flip all signs</button>
+          <button type="button" id="btn-add" class="btn btn-ghost btn-small">Add row</button>
+        </div>
+      </div>
+      <dl class="totals">
+        <div><dt>Transactions</dt><dd id="t-count">0</dd></div>
+        <div><dt>Money in</dt><dd id="t-in" class="pos">0.00</dd></div>
+        <div><dt>Money out</dt><dd id="t-out" class="neg">0.00</dd></div>
+        <div><dt>Net</dt><dd id="t-net">0.00</dd></div>
+      </dl>
+      <p id="t-review" class="review-warning" hidden></p>
+      <div class="table-wrap">
+        <table class="txn">
+          <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Balance</th><th><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody id="txn-body"></tbody>
+        </table>
+      </div>
+      <p class="hint">Money in is positive, money out is negative. Click any cell to edit it.</p>
+    </section>
+
+    <section id="export-section" class="export-bar" hidden>
+      <label>Export as
+        <select id="export-format"></select>
+      </label>
+      <button type="button" id="btn-export" class="btn">Download</button>
+      <p id="export-note" class="export-note"></p>
+    </section>
+  </main>
+
+  <dialog id="password-dialog" class="dialog">
+    <form method="dialog">
+      <h3>Password-protected PDF</h3>
+      <p><span id="password-file"></span> needs a password. It stays on this device.</p>
+      <p id="password-wrong" class="error" hidden>Wrong password, try again.</p>
+      <input id="password-input" type="password" autocomplete="off" aria-label="PDF password">
+      <div class="dialog-actions">
+        <button value="cancel" class="btn btn-ghost">Cancel</button>
+        <button value="ok" class="btn">Open</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pro-dialog" class="dialog">
+    <button type="button" class="dialog-x" data-close aria-label="Close">✕</button>
+    <h3>Unlock LocalLedger Pro</h3>
+    <p id="pro-reason" class="muted"></p>
+    <ul class="checks">
+      <li>Unlimited transactions and files</li>
+      <li>All formats: Excel, CSV, QuickBooks, Xero, QIF, OFX</li>
+      <li>One-time payment — no subscription</li>
+      <li>Still 100% private: files never leave your device</li>
+    </ul>
+    <form id="checkout-form" class="stack">
+      <label>Email for your license key
+        <input name="email" type="email" required autocomplete="email" placeholder="you@company.com">
+      </label>
+      <div class="row">
+        <label>Currency
+          <select id="checkout-currency"><option value="USD">USD</option><option value="EUR">EUR</option></select>
+        </label>
+        <label>Pay with
+          <select name="method"><option value="card">Card / Apple Pay</option><option value="paypal">PayPal</option></select>
+        </label>
+      </div>
+      <button type="submit" class="btn btn-wide">Continue to secure checkout</button>
+      <p class="fine">Pay <strong data-price>$29</strong> once. Payments are processed by lava.top (Lavalane Ltd, Cyprus). 14-day money-back guarantee.</p>
+      <p id="checkout-error" class="error" role="alert"></p>
+    </form>
+    <button type="button" id="free-download" class="btn btn-ghost btn-wide" hidden>Download the first 15 rows for free</button>
+    <details class="activate">
+      <summary>Already have a license key?</summary>
+      <form id="activate-form" class="stack">
+        <textarea name="key" rows="3" required placeholder="LL1.…" aria-label="License key"></textarea>
+        <button type="submit" class="btn btn-ghost">Activate</button>
+        <p id="activate-msg" role="status"></p>
+      </form>
+    </details>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
