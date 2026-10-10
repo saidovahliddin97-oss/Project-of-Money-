@@ -81,7 +81,7 @@ async function pubkey(request, env) {
 
 async function checkout(request, env, deps) {
   if (!env.LAVA_API_KEY || !env.LAVA_OFFER_ID) {
-    return json({ error: 'Checkout is not configured yet. Please email support to buy a license.' }, 503);
+    return json({ error: 'Checkout is not available yet. Please try again later.' }, 503);
   }
   const body = await readJson(request);
   const email = String(body.email || '').trim().toLowerCase();
