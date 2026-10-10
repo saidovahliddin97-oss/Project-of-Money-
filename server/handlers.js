@@ -204,6 +204,23 @@ async function event(request, env) {
   return new Response(null, { status: 204 });
 }
 
+// Manual license issuing for the owner (invoice sales, lost keys) so the
+// private key never has to leave the hosting secrets.
+async function adminIssue(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (!env.ADMIN_TOKEN || !timingSafeEqual(token, env.ADMIN_TOKEN)) return json({ error: 'Unauthorized' }, 401);
+  const key = privateKey(env);
+  if (!key) return json({ error: 'Licensing is not configured.' }, 503);
+  const body = await readJson(request);
+  const email = String(body.email || '').trim().toLowerCase();
+  if (!EMAIL_RE.test(email)) return json({ error: 'Invalid email' }, 400);
+  const ref = String(body.ref || `manual-${new Date().toISOString().slice(0, 10)}`).slice(0, 100);
+  const license = await signLicense({ email, ref, plan: 'pro' }, key);
+  await kvPut(env, `license:${ref}`, JSON.stringify({ email, manual: true }));
+  return json({ email, ref, license });
+}
+
 async function stats(request, env) {
   const token = new URL(request.url).searchParams.get('token') || '';
   if (!env.ADMIN_TOKEN || !timingSafeEqual(token, env.ADMIN_TOKEN)) return json({ error: 'Unauthorized' }, 401);
@@ -269,6 +286,7 @@ const ROUTES = {
   'POST /api/webhook/lava': webhook,
   'POST /api/event': event,
   'GET /api/stats': stats,
+  'POST /api/admin/issue': adminIssue,
 };
 
 /**

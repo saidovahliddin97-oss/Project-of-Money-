@@ -323,4 +323,8 @@ writeFileSync(
   join(root, 'public', 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}${u}</loc><lastmod>${UPDATED}</lastmod></url>`).join('\n')}\n</urlset>\n`,
 );
+writeFileSync(
+  join(root, 'public', 'robots.txt'),
+  `User-agent: *\nAllow: /\nDisallow: /setup.html\nDisallow: /success.html\nDisallow: /cancel.html\nSitemap: ${SITE}/sitemap.xml\n`,
+);
 console.log(`Wrote ${guides.length} guides, guides index and sitemap.xml for ${SITE}`);

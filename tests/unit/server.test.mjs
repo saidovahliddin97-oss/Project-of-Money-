@@ -141,6 +141,19 @@ test('pubkey endpoint exposes only the public half', async () => {
   assert.equal((await handle(req('GET', '/api/pubkey'), { ...e, LICENSE_PRIVATE_JWK: '' })).status, 503);
 });
 
+test('admin can issue a license manually with the bearer token', async () => {
+  const { env: e, publicJwk } = await env();
+  assert.equal((await handle(req('POST', '/api/admin/issue', { email: 'x@y.co' }), e)).status, 401);
+  assert.equal((await handle(req('POST', '/api/admin/issue', { email: 'x@y.co' }, { Authorization: 'Bearer nope' }), e)).status, 401);
+  assert.equal((await handle(req('POST', '/api/admin/issue', { email: 'bad' }, { Authorization: 'Bearer adm' }), e)).status, 400);
+  const res = await handle(req('POST', '/api/admin/issue', { email: 'X@y.co', ref: 'inv-7' }, { Authorization: 'Bearer adm' }), e);
+  const body = await res.json();
+  const v = await verifyLicense(body.license, publicJwk);
+  assert.equal(v.valid, true);
+  assert.equal(v.email, 'x@y.co');
+  assert.equal(v.ref, 'inv-7');
+});
+
 test('routing: 404, 405 and bad JSON', async () => {
   const { env: e } = await env();
   assert.equal((await handle(req('GET', '/api/nope'), e)).status, 404);

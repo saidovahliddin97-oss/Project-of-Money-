@@ -6,6 +6,46 @@
 
 ---
 
+## Вариант А (рекомендуется): автоматический деплой одной командой
+
+Скрипт `scripts/deploy-cloudflare.mjs` сам создаёт проект Pages, KV-хранилище, ключ подписи лицензий (хранится только как зашифрованный секрет Cloudflare и нигде не выводится), загружает сайт и проверяет `/api/health`. Повторный запуск безопасен: ключ не перегенерируется.
+
+От вас нужен только API-токен:
+
+**ДЕЙСТВИЕ 1.** Зарегистрируйтесь на https://dash.cloudflare.com/sign-up (бесплатно, карта не нужна) и подтвердите email.
+
+**ДЕЙСТВИЕ 2.** Скопируйте **Account ID**: в панели — **Workers & Pages** → справа блок «Account details» → Account ID.
+
+**ДЕЙСТВИЕ 3.** Создайте токен: https://dash.cloudflare.com/profile/api-tokens → **Create Token** → **Create Custom Token**:
+- Token name: `localledger-deploy`;
+- Permissions: `Account` → `Cloudflare Pages` → `Edit`; **Add more** → `Account` → `Workers KV Storage` → `Edit`;
+- Account Resources: `Include` → ваш аккаунт;
+- **Continue to summary → Create Token**, скопируйте токен (показывается один раз).
+
+**ДЕЙСТВИЕ 4.** Передайте токен Claude **не через чат**, а через настройки облачной среды: меню среды в заголовке сессии → **Edit** → раздел секретов/переменных окружения (Network secrets / API credentials или Environment variables):
+- `CLOUDFLARE_API_TOKEN` = токен из шага 3;
+- `CLOUDFLARE_ACCOUNT_ID` = Account ID из шага 2.
+
+Сохраните и откройте **новую сессию** (переменные подхватываются при старте). Попросите: «задеплой на Cloudflare».
+
+**ДЕЙСТВИЕ 5 (или сами, на своём компьютере с Node.js 20+):**
+```bash
+git clone -b claude/peaceful-dijkstra-pxl0xc https://github.com/saidovahliddin97-oss/Project-of-Money-.git
+cd Project-of-Money- && npm install
+CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... npm run deploy:cf
+```
+Результат: строка `✔ https://localledger….pages.dev/api/health → {"ok":true,…,"licensing":true,"events":true}` и адрес сайта.
+
+Необязательные переменные, которые скрипт тоже перенесёт в проект, если они заданы в окружении: `LAVA_API_KEY`, `LAVA_OFFER_ID`, `LAVA_PRODUCT_NAME`, `LAVA_WEBHOOK_SECRET`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `ADMIN_TOKEN`. Их можно добавить и позже (Часть 3–5) и запустить скрипт повторно.
+
+Ручная выдача ключа (оплата по счёту, потерянный ключ) без доступа к закрытому ключу:
+```bash
+curl -X POST https://<адрес>/api/admin/issue -H "Authorization: Bearer <ADMIN_TOKEN>" \
+  -H "Content-Type: application/json" -d '{"email":"buyer@example.com","ref":"invoice-001"}'
+```
+
+## Вариант Б: вручную через панель Cloudflare
+
 ## Часть 1. Публикация сайта на Cloudflare Pages (~10 минут)
 
 **ДЕЙСТВИЕ 1.** Откройте https://dash.cloudflare.com/sign-up и зарегистрируйтесь по email (бесплатно, карта не нужна).
@@ -91,7 +131,7 @@ LAVA_API_KEY=ваш_ключ npm run lava:products
 
 ```bash
 npm install          # ставит pdf.js и копирует его в public/assets/vendor
-npm test             # 24 модульных теста
+npm test             # 25 модульных тестов
 npm run test:e2e     # 15 сквозных проверок в Chromium (нужен Playwright)
 npm run dev          # http://localhost:8787 (секреты читаются из .dev.vars)
 ```

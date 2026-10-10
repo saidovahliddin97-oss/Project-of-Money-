@@ -49,8 +49,8 @@ public/                    статический сайт (выходная п�
 server/                    API: handlers.js (checkout, claim, webhook, events, stats, pubkey), lava.js
 functions/api/[[path]].js  адаптер Cloudflare Pages Functions
 api/router.js, vercel.json адаптер Vercel (альтернатива)
-scripts/                   dev-сервер, генерация гайдов, ключей, ручная выдача лицензий, список офферов lava.top
-tests/unit/                24 модульных теста (node:test)
+scripts/                   деплой на Cloudflare (deploy-cloudflare.mjs), dev-сервер, гайды, ключи, ручная выдача лицензий, офферы lava.top
+tests/unit/                25 модульных тестов (node:test)
 tests/e2e/run-e2e.mjs      15 сквозных проверок в Chromium
 tests/fixtures/make-pdfs.mjs  генератор тестовых выписок (US, UK, карта, EU, скан)
 ```
@@ -77,6 +77,7 @@ npm run dev        # http://localhost:8787
 | POST | `/api/webhook/lava` | вебхуки lava.top (X-Api-Key или Basic Auth) |
 | POST | `/api/event` | анонимный счётчик события |
 | GET | `/api/stats?token=` | счётчики по дням |
+| POST | `/api/admin/issue` | ручная выдача ключа (Bearer ADMIN_TOKEN) |
 
 ## Известные ограничения
 
