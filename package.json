@@ -20,7 +20,8 @@
     "guides": "node scripts/build-guides.mjs",
     "lava:products": "node scripts/lava-products.mjs",
     "deploy:cf": "node scripts/deploy-cloudflare.mjs",
-    "indexnow": "node scripts/indexnow.mjs"
+    "indexnow": "node scripts/indexnow.mjs",
+    "stats": "node scripts/stats.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "6.3.289"
