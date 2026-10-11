@@ -6,7 +6,7 @@ import { signLicense } from '../public/assets/js/core/license.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
-const EVENTS = new Set(['visit_app', 'file_loaded', 'parse_ok', 'parse_empty', 'export_free', 'export_locked', 'checkout_start', 'license_activated']);
+const EVENTS = new Set(['pageview', 'visit_app', 'file_loaded', 'parse_ok', 'parse_empty', 'export_free', 'export_locked', 'checkout_start', 'license_activated']);
 
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), {
@@ -108,7 +108,7 @@ async function checkout(request, env, deps) {
   try {
     const inv = await lava(env, deps).createInvoice(params);
     if (!inv?.id || !inv?.paymentUrl) return json({ error: 'Payment provider returned an unexpected response.' }, 502);
-    await countEvent(env, 'checkout_created');
+    await record(env, ['checkout_created']);
     return json({ invoiceId: inv.id, paymentUrl: inv.paymentUrl });
   } catch (e) {
     if (e instanceof LavaError) {
@@ -180,17 +180,20 @@ async function webhook(request, env, deps) {
 
   let message = null;
   if (type === 'payment.success') {
-    await countEvent(env, 'purchase');
+    await record(env, ['purchase'], { gross: { [evt.currency || 'USD']: Number(evt.amount) || 0 } });
+    await kvPut(env, `sale:${new Date().toISOString()}:${evt.contractId || ''}`, JSON.stringify({
+      amount: evt.amount, currency: evt.currency, product: evt.product?.title || '', email: maskEmail(evt.buyer?.email),
+    }));
     message = `✅ New sale: ${evt.amount} ${evt.currency} — ${evt.product?.title || 'product'} — ${evt.buyer?.email || ''}`;
   } else if (type === 'payment.failed') {
-    await countEvent(env, 'payment_failed');
+    await record(env, ['payment_failed']);
     message = `⚠️ Failed payment: ${evt.amount} ${evt.currency} — ${evt.errorMessage || 'no reason'}`;
   } else if (type === 'refund.success') {
-    await countEvent(env, 'refund');
+    await record(env, ['refund'], { refunds: { [evt.data?.currency || 'USD']: Number(evt.data?.amount) || 0 } });
     message = `↩️ Refund: ${evt.data?.amount} ${evt.data?.currency} — ${evt.data?.customer_email || ''}`;
     if (evt.data?.customer_email) await kvPut(env, `refunded:${String(evt.data.customer_email).toLowerCase()}`, evt.created_at || '1');
   } else if (type === 'chargeback.initiated') {
-    await countEvent(env, 'chargeback');
+    await record(env, ['chargeback'], { refunds: { [evt.data?.currency || 'USD']: Number(evt.data?.amount) || 0 } });
     message = `🚨 Chargeback: ${evt.data?.amount} ${evt.data?.currency} — ${evt.data?.reason_category || ''} — ${evt.data?.customer_email || ''}`;
   }
   if (message) await notify(env, deps, message);
@@ -198,18 +201,34 @@ async function webhook(request, env, deps) {
 }
 
 async function event(request, env) {
-  const body = await readJson(request, 1024);
+  const body = await readJson(request, 2048);
   if (!EVENTS.has(body.name)) return json({ error: 'unknown event' }, 400);
-  await countEvent(env, body.name);
+  const ua = request.headers.get('User-Agent') || '';
+  if (BOT_RE.test(ua)) return new Response(null, { status: 204 });
+  if (body.name === 'pageview') {
+    const names = ['pageview'];
+    const dims = {
+      pg: cleanPath(body.path),
+      cc: request.cf?.country || 'XX',
+      dev: deviceOf(ua),
+      os: osOf(ua),
+    };
+    if (body.visit) {
+      names.push('visit');
+      dims.ref = cleanHost(body.ref) || '(direct)';
+      if (body.src) dims.src = String(body.src).slice(0, 60).toLowerCase();
+    }
+    await record(env, names, dims);
+  } else {
+    await record(env, [body.name]);
+  }
   return new Response(null, { status: 204 });
 }
 
 // Manual license issuing for the owner (invoice sales, lost keys) so the
 // private key never has to leave the hosting secrets.
 async function adminIssue(request, env) {
-  const auth = request.headers.get('Authorization') || '';
-  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
-  if (!env.ADMIN_TOKEN || !timingSafeEqual(token, env.ADMIN_TOKEN)) return json({ error: 'Unauthorized' }, 401);
+  if (!isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
   const key = privateKey(env);
   if (!key) return json({ error: 'Licensing is not configured.' }, 503);
   const body = await readJson(request);
@@ -221,21 +240,71 @@ async function adminIssue(request, env) {
   return json({ email, ref, license });
 }
 
+function isAdmin(request, env) {
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : new URL(request.url).searchParams.get('token') || '';
+  return Boolean(env.ADMIN_TOKEN) && timingSafeEqual(token, env.ADMIN_TOKEN);
+}
+
+async function readDays(env, from, count) {
+  const keys = [];
+  for (let i = 0; i < count; i++) keys.push(new Date(from - i * 86400000).toISOString().slice(0, 10));
+  const blobs = await Promise.all(keys.map((d) => env.LL_KV.get(`day:${d}`)));
+  return keys.map((date, i) => ({ date, data: blobs[i] ? JSON.parse(blobs[i]) : {} })).reverse();
+}
+
+function mergeDays(list) {
+  const out = {};
+  for (const { data } of list) {
+    for (const [dim, map] of Object.entries(data)) {
+      out[dim] ??= {};
+      for (const [k, v] of Object.entries(map)) out[dim][k] = Math.round(((out[dim][k] || 0) + v) * 100) / 100;
+    }
+  }
+  return out;
+}
+
 async function stats(request, env) {
-  const token = new URL(request.url).searchParams.get('token') || '';
-  if (!env.ADMIN_TOKEN || !timingSafeEqual(token, env.ADMIN_TOKEN)) return json({ error: 'Unauthorized' }, 401);
+  if (!isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
   if (!env.LL_KV) return json({ error: 'KV not bound' }, 503);
   const days = Math.min(90, Math.max(1, Number(new URL(request.url).searchParams.get('days')) || 14));
-  const out = {};
-  const list = await env.LL_KV.list({ prefix: 'count:' });
-  const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
-  for (const k of list.keys) {
-    const [, day, name] = k.name.split(':');
-    if (day < since) continue;
-    out[day] ??= {};
-    out[day][name] = Number(await env.LL_KV.get(k.name)) || 0;
-  }
-  return json({ days, counts: out });
+  const list = await readDays(env, Date.now(), days);
+  const counts = {};
+  for (const { date, data } of list) if (data.ev) counts[date] = data.ev;
+  return json({ days, counts });
+}
+
+// Everything the owner's dashboard needs in one request.
+async function adminSummary(request, env) {
+  if (!isAdmin(request, env)) return json({ error: 'Unauthorized' }, 401);
+  if (!env.LL_KV) return json({ error: 'KV not bound' }, 503);
+  const days = Math.min(90, Math.max(1, Number(new URL(request.url).searchParams.get('days')) || 30));
+  const now = Date.now();
+  const [cur, prev, saleList] = await Promise.all([
+    readDays(env, now, days),
+    readDays(env, now - days * 86400000, days),
+    env.LL_KV.list({ prefix: 'sale:', limit: 1000 }),
+  ]);
+  const saleKeys = saleList.keys.map((k) => k.name).sort().reverse().slice(0, 20);
+  const sales = (await Promise.all(saleKeys.map((k) => env.LL_KV.get(k)))).map((v, i) => ({
+    at: saleKeys[i].slice(5, 29),
+    ...(v ? JSON.parse(v) : {}),
+  }));
+  return json({
+    days,
+    generatedAt: new Date(now).toISOString(),
+    current: mergeDays(cur),
+    previous: mergeDays(prev),
+    series: cur.map(({ date, data }) => ({ date, ev: data.ev || {} })),
+    sales,
+    config: {
+      checkout: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID),
+      licensing: Boolean(privateKey(env)),
+      webhookAuth: Boolean(env.LAVA_WEBHOOK_SECRET),
+      notifications: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+      siteUrl: env.SITE_URL || null,
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -249,15 +318,79 @@ async function kvPut(env, key, value) {
   }
 }
 
-async function countEvent(env, name) {
+const DIMS = ['pg', 'ref', 'cc', 'dev', 'os', 'src'];
+const MAX_KEYS = 200;
+
+/**
+ * One KV write per event: all of a day's counters live in a single JSON blob
+ * (day:YYYY-MM-DD). Counts are approximate under concurrent writes, which is
+ * fine for a dashboard and keeps us far below the free plan's write limit.
+ */
+async function record(env, names, dims = {}) {
   if (!env.LL_KV) return;
-  const key = `count:${new Date().toISOString().slice(0, 10)}:${name}`;
+  const key = `day:${new Date().toISOString().slice(0, 10)}`;
   try {
-    const cur = Number(await env.LL_KV.get(key)) || 0;
-    await env.LL_KV.put(key, String(cur + 1), { expirationTtl: 60 * 60 * 24 * 400 });
+    const raw = await env.LL_KV.get(key);
+    const d = raw ? JSON.parse(raw) : {};
+    d.ev ??= {};
+    for (const n of names) d.ev[n] = (d.ev[n] || 0) + 1;
+    for (const dim of DIMS) {
+      if (!dims[dim]) continue;
+      d[dim] ??= {};
+      const k = String(dims[dim]).slice(0, 100);
+      d[dim][k] = (d[dim][k] || 0) + 1;
+      prune(d[dim]);
+    }
+    for (const money of ['gross', 'refunds']) {
+      if (!dims[money]) continue;
+      d[money] ??= {};
+      for (const [cur, amt] of Object.entries(dims[money])) d[money][cur.toUpperCase()] = Math.round(((d[money][cur.toUpperCase()] || 0) + amt) * 100) / 100;
+    }
+    await env.LL_KV.put(key, JSON.stringify(d), { expirationTtl: 60 * 60 * 24 * 400 });
   } catch {
-    /* counters are best-effort */
+    /* analytics are best-effort */
   }
+}
+
+function prune(map) {
+  const entries = Object.entries(map);
+  if (entries.length <= MAX_KEYS) return;
+  entries.sort((a, b) => a[1] - b[1]);
+  for (const [k] of entries.slice(0, entries.length - MAX_KEYS)) delete map[k];
+}
+
+const BOT_RE = /bot|crawl|spider|slurp|headless|preview|monitor|curl|wget|python|node-fetch|axios/i;
+
+function deviceOf(ua) {
+  if (/iPad|Tablet|Nexus 7|Nexus 10|SM-T|Kindle|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) return 'tablet';
+  if (/Mobi|iPhone|iPod|Android.*Mobile|Windows Phone/i.test(ua)) return 'mobile';
+  return 'desktop';
+}
+
+function osOf(ua) {
+  if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Windows/i.test(ua)) return 'Windows';
+  if (/Mac OS X|Macintosh/i.test(ua)) return 'macOS';
+  if (/CrOS/i.test(ua)) return 'ChromeOS';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'other';
+}
+
+function cleanPath(p) {
+  const s = String(p || '/').split(/[?#]/)[0].slice(0, 100);
+  return s.replace(/\.html$/, '').replace(/\/index$/, '/') || '/';
+}
+
+function cleanHost(h) {
+  const s = String(h || '').toLowerCase().replace(/^www\./, '').slice(0, 80);
+  return /^[a-z0-9.-]+$/.test(s) ? s : '';
+}
+
+function maskEmail(e) {
+  const s = String(e || '');
+  const at = s.indexOf('@');
+  return at > 1 ? `${s[0]}***${s.slice(at)}` : s ? '***' : '';
 }
 
 async function notify(env, deps, text) {
@@ -287,6 +420,7 @@ const ROUTES = {
   'POST /api/event': event,
   'GET /api/stats': stats,
   'POST /api/admin/issue': adminIssue,
+  'GET /api/admin/summary': adminSummary,
 };
 
 /**

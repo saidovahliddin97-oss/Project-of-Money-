@@ -133,6 +133,39 @@ test('events and stats', async () => {
   assert.equal((await res.json()).counts[day].parse_ok, 2);
 });
 
+test('pageviews record country, device, referrer; admin summary aggregates them', async () => {
+  const { env: e } = await env();
+  const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1';
+  const pv = (body, ua) => {
+    const r = req('POST', '/api/event', body, { 'User-Agent': ua });
+    Object.defineProperty(r, 'cf', { value: { country: 'US' } });
+    return r;
+  };
+  await handle(pv({ name: 'pageview', path: '/guides/convert-csv-to-qif.html', ref: 'www.Google.com', visit: true, src: 'Reddit' }, iphone), e);
+  await handle(pv({ name: 'pageview', path: '/app.html', ref: '', visit: false }, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)'), e);
+  await handle(pv({ name: 'pageview', path: '/' }, 'Googlebot/2.1'), e);
+  const day = JSON.parse(await e.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
+  assert.deepEqual(day.ev, { pageview: 2, visit: 1 });
+  assert.deepEqual(day.ref, { 'google.com': 1 });
+  assert.deepEqual(day.src, { reddit: 1 });
+  assert.deepEqual(day.cc, { US: 2 });
+  assert.deepEqual(day.dev, { mobile: 1, desktop: 1 });
+  assert.deepEqual(day.os, { iOS: 1, macOS: 1 });
+  assert.deepEqual(day.pg, { '/guides/convert-csv-to-qif': 1, '/app': 1 });
+
+  const payload = { eventType: 'payment.success', product: { title: 'LocalLedger Pro' }, buyer: { email: 'buyer@x.co' }, contractId: INV, amount: 29, currency: 'USD' };
+  await handle(req('POST', '/api/webhook/lava', payload, { 'X-Api-Key': 'whsec' }), e, { fetch: async () => new Response('{}') });
+  assert.equal((await handle(req('GET', '/api/admin/summary?days=7'), e)).status, 401);
+  const res = await handle(req('GET', '/api/admin/summary?days=7', null, { Authorization: 'Bearer adm' }), e);
+  const sum = await res.json();
+  assert.equal(sum.current.ev.pageview, 2);
+  assert.equal(sum.current.ev.purchase, 1);
+  assert.deepEqual(sum.current.gross, { USD: 29 });
+  assert.equal(sum.series.length, 7);
+  assert.equal(sum.sales[0].email, 'b***@x.co');
+  assert.equal(sum.config.licensing, true);
+});
+
 test('pubkey endpoint exposes only the public half', async () => {
   const { env: e, publicJwk } = await env();
   const body = await (await handle(req('GET', '/api/pubkey'), e)).json();

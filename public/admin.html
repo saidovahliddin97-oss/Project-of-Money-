@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Кабинет — LocalLedger</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/assets/img/og.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/admin.css">
+  <script type="module" src="/assets/js/admin.js"></script>
+</head>
+<body class="adm">
+  <section id="login" class="adm-login" hidden>
+    <form id="login-form" class="card stack">
+      <h1>Кабинет владельца</h1>
+      <p class="muted">Вход только для владельца сайта.</p>
+      <label>Пароль
+        <input id="pw" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-wide" type="submit">Войти</button>
+      <p id="login-err" class="error" role="alert"></p>
+    </form>
+  </section>
+
+  <div id="dash" hidden>
+    <header class="adm-head">
+      <a class="brand" href="/" target="_blank" rel="noopener"><img src="/assets/img/logo.svg" alt="" width="26" height="26"> LocalLedger</a>
+      <div class="adm-controls">
+        <div class="seg" role="group" aria-label="Период">
+          <button type="button" data-days="1">День</button>
+          <button type="button" data-days="7">7 дней</button>
+          <button type="button" data-days="30" class="on">30 дней</button>
+          <button type="button" data-days="90">90 дней</button>
+        </div>
+        <button type="button" id="refresh" class="btn btn-ghost btn-small" title="Обновить">↻</button>
+        <button type="button" id="logout" class="btn btn-ghost btn-small">Выйти</button>
+      </div>
+    </header>
+
+    <main class="adm-main">
+      <p id="status-line" class="muted small"></p>
+
+      <section class="kpis" id="kpis"></section>
+
+      <section class="card">
+        <div class="card-head"><h2>Динамика</h2><span class="legend"><i class="l1"></i>Визиты <i class="l2"></i>Загрузки файлов <i class="l3"></i>Продажи</span></div>
+        <div id="chart" class="chart"></div>
+      </section>
+
+      <div class="grid2">
+        <section class="card">
+          <div class="card-head"><h2>Воронка продаж</h2></div>
+          <div id="funnel"></div>
+        </section>
+        <section class="card">
+          <div class="card-head"><h2>Деньги</h2></div>
+          <div id="money"></div>
+        </section>
+      </div>
+
+      <div class="grid2">
+        <section class="card"><div class="card-head"><h2>Источники трафика</h2></div><div id="t-ref"></div></section>
+        <section class="card"><div class="card-head"><h2>Популярные страницы</h2></div><div id="t-pg"></div></section>
+        <section class="card"><div class="card-head"><h2>Страны</h2></div><div id="t-cc"></div></section>
+        <section class="card"><div class="card-head"><h2>Устройства и системы</h2></div><div id="t-dev"></div><div id="t-os"></div></section>
+        <section class="card"><div class="card-head"><h2>Метки кампаний (utm_source)</h2></div><div id="t-src"></div></section>
+        <section class="card"><div class="card-head"><h2>Качество продукта</h2></div><div id="quality"></div></section>
+      </div>
+
+      <section class="card">
+        <div class="card-head"><h2>Последние продажи</h2></div>
+        <div id="sales"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Состояние системы</h2></div>
+        <ul id="health" class="health"></ul>
+      </section>
+
+      <p class="muted small">Данные собираются без cookies и без персональных данных; счётчики приблизительные. Боты исключены.</p>
+    </main>
+  </div>
+</body>
+</html>

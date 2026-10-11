@@ -268,6 +268,7 @@ function page({ title, description, path, body, jsonLd }) {
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:image" content="${SITE}/assets/img/og.png">
   <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/pv.js" defer></script>
 ${jsonLd ? `  <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>\n` : ''}</head>
 <body>
 ${header}
@@ -325,6 +326,6 @@ writeFileSync(
 );
 writeFileSync(
   join(root, 'public', 'robots.txt'),
-  `User-agent: *\nAllow: /\nDisallow: /setup.html\nDisallow: /success.html\nDisallow: /cancel.html\nSitemap: ${SITE}/sitemap.xml\n`,
+  `User-agent: *\nAllow: /\nDisallow: /setup.html\nDisallow: /admin.html\nDisallow: /success.html\nDisallow: /cancel.html\nSitemap: ${SITE}/sitemap.xml\n`,
 );
 console.log(`Wrote ${guides.length} guides, guides index and sitemap.xml for ${SITE}`);

@@ -6,15 +6,15 @@ const days = Number(process.argv[2]) || 14;
 const api = (p) => fetch(`https://api.cloudflare.com/client/v4/accounts/${A}${p}`, { headers: { Authorization: `Bearer ${T}` } });
 const ns = (await (await api('/storage/kv/namespaces?per_page=100')).json()).result.find((n) => n.title === 'localledger-LL_KV');
 if (!ns) throw new Error('KV namespace localledger-LL_KV not found');
-const keys = (await (await api(`/storage/kv/namespaces/${ns.id}/keys?prefix=count:&limit=1000`)).json()).result;
+const keys = (await (await api(`/storage/kv/namespaces/${ns.id}/keys?prefix=day:&limit=1000`)).json()).result;
 const since = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
-const table = {};
-for (const { name } of keys) {
-  const [, day, evt] = name.split(':');
-  if (day < since) continue;
-  const v = await (await api(`/storage/kv/namespaces/${ns.id}/values/${encodeURIComponent(name)}`)).text();
-  (table[day] ??= {})[evt] = Number(v) || 0;
-}
+const byDay = {};
 const totals = {};
-for (const d of Object.values(table)) for (const [k, v] of Object.entries(d)) totals[k] = (totals[k] || 0) + v;
-console.log(JSON.stringify({ days, totals, byDay: table }, null, 2));
+for (const { name } of keys) {
+  const day = name.slice(4);
+  if (day < since) continue;
+  const blob = await (await api(`/storage/kv/namespaces/${ns.id}/values/${encodeURIComponent(name)}`)).json();
+  byDay[day] = blob.ev || {};
+  for (const [k, v] of Object.entries(blob.ev || {})) totals[k] = (totals[k] || 0) + v;
+}
+console.log(JSON.stringify({ days, totals, byDay }));

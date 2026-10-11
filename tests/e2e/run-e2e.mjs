@@ -78,7 +78,8 @@ const app = await startServer({
 });
 const BASE = `http://localhost:${APP_PORT}`;
 
-const browser = await chromium.launch();
+// A regular desktop UA: the analytics endpoint ignores headless/bot user agents.
+const browser = await chromium.launch({ args: ['--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36'] });
 const results = [];
 const step = async (name, fn) => {
   try {
@@ -260,8 +261,10 @@ try {
 
   await step('server-side counters recorded the funnel', async () => {
     const day = new Date().toISOString().slice(0, 10);
-    assert.ok(Number(await kv.get(`count:${day}:parse_ok`)) >= 1);
-    assert.ok(Number(await kv.get(`count:${day}:checkout_start`)) >= 1);
+    const blob = JSON.parse(await kv.get(`day:${day}`));
+    assert.ok(blob.ev.parse_ok >= 1);
+    assert.ok(blob.ev.checkout_start >= 1);
+    assert.ok(blob.ev.pageview >= 1, 'page views are counted');
   });
 
   await step('no browser errors during the run', async () => {

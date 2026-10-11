@@ -7,6 +7,7 @@
   <meta name="description" content="LocalLedger processes bank statements locally in your browser. What data we do and do not collect.">
   <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/pv.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -25,6 +26,7 @@
     <h2>What we do collect</h2>
     <ul>
       <li><strong>Anonymous usage counters.</strong> The app sends event names such as "file_loaded", "parse_ok" or "checkout_start" so we can see how many people use each step. These requests contain no file data, no email and no identifiers. Counts are stored per day.</li>
+      <li><strong>Aggregated page statistics.</strong> For each page view we count the page path, the referring website (domain only), the utm_source tag, the country (derived by our host from the connection, the IP address itself is not stored) and the device type and operating system. Only daily totals are kept — no cookies and no per-visitor records.</li>
       <li><strong>Purchase data.</strong> When you buy Pro, the payment is processed by lava.top (Lavalane Ltd, Cyprus). We receive your email address, the amount, currency and order id. We use them to issue your license key, provide support and process refunds. Card details are handled only by the payment provider.</li>
       <li><strong>Hosting logs and website analytics.</strong> Our hosting provider may keep standard technical logs (IP address, user agent, time) for security. If enabled, Cloudflare Web Analytics counts page views without cookies.</li>
     </ul>
