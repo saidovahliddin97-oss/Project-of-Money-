@@ -19,7 +19,8 @@
     "dev:cf": "npx wrangler@4.139.0 pages dev public --compatibility-date=2026-09-01 --kv LL_KV",
     "guides": "node scripts/build-guides.mjs",
     "lava:products": "node scripts/lava-products.mjs",
-    "deploy:cf": "node scripts/deploy-cloudflare.mjs"
+    "deploy:cf": "node scripts/deploy-cloudflare.mjs",
+    "indexnow": "node scripts/indexnow.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "6.3.289"
