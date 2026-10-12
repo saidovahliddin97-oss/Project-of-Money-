@@ -41,7 +41,7 @@ $200/нед ≈ 7 продаж. При конверсии визит→опла�
 - `GOOGLE_SITE_VERIFICATION` → ship выкладывает файл подтверждения Search Console.
 
 ## Действия владельца (по убыванию отдачи, ~30 минут суммарно)
-1. **Google Search Console** (5 мин): search.google.com/search-console → «Префикс URL» → `https://localledger-40f.pages.dev/` → способ «HTML-файл». Скопировать имя файла `google….html` в переменную `GOOGLE_SITE_VERIFICATION` среды → `npm run ship` → «Подтвердить» → «Файлы Sitemap» → `sitemap.xml`. Без этого Google может месяцами не видеть сайт.
+1. ✅ (12.10) **Google Search Console** (5 мин): search.google.com/search-console → «Префикс URL» → `https://localledger-40f.pages.dev/` → способ «HTML-файл». Скопировать имя файла `google….html` в переменную `GOOGLE_SITE_VERIFICATION` среды → `npm run ship` → «Подтвердить» → «Файлы Sitemap» → `sitemap.xml`. Без этого Google может месяцами не видеть сайт.
 2. **Bing Webmaster Tools** (2 мин): импорт из Search Console одной кнопкой.
 3. **Свой домен** (~$10–15/год, нужно ваше решение): уводит от шаблона `*ledger*.pages.dev`, на который ругаются антифишинговые базы, и даёт доверие бухгалтерам. Окупается одной продажей.
 4. **Каталоги** (по 5 мин каждый, тексты готовы в `docs/MARKETING.md`): PeerPush, Peerlist, AlternativeTo (как альтернатива DocuClipper и ProperConvert), SaaSHub, Product Hunt. Там уже есть конкуренты, значит, туда приходят покупатели этой категории.
