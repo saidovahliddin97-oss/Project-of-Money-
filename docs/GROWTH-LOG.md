@@ -7,3 +7,4 @@
 ## 2026-10-12 (owner)
 - Google Search Console: сайт подтверждён (файл отдаёт functions/google9d78c40fd4e6f06c.html.js), sitemap отправлен владельцем.
 - Telegram-бот: webhook, чат владельца закреплён.
+- PeerPush: карточка https://peerpush.com/p/localledger, бесплатная очередь #5374 (~2,5 мес.). Платный пропуск очереди не берём.
