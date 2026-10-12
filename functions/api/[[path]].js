@@ -2,5 +2,5 @@
 import { handle } from '../../server/handlers.js';
 
 export async function onRequest(context) {
-  return handle(context.request, context.env, { log: console.log });
+  return handle(context.request, context.env, { log: console.log, waitUntil: (p) => context.waitUntil(p) });
 }

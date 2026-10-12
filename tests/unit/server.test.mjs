@@ -157,7 +157,7 @@ test('webhook: auth required, idempotent, notifies seller', async () => {
   res = await handle(req('POST', '/api/webhook/lava', payload, { Authorization: 'Basic ' + btoa('lava:whsec') }), e, { fetch });
   assert.deepEqual(await res.json(), { ok: true, duplicate: true });
   assert.equal(calls.filter((c) => c.url.includes('telegram')).length, 1);
-  assert.match(JSON.parse(calls[0].init.body).text, /New sale: 29 USD/);
+  assert.match(JSON.parse(calls[0].init.body).text, /Продажа: 29 USD/);
   const refund = { event_id: 'r1', event_type: 'refund.success', data: { amount: 29, currency: 'USD', customer_email: 'B@x.co' } };
   res = await handle(req('POST', '/api/webhook/lava', refund, { 'X-Api-Key': 'whsec' }), e, { fetch });
   assert.equal(res.status, 200);

@@ -18,6 +18,7 @@
 | `public/assets/js/config.js` | цены, лимит free (15 строк), email поддержки |
 | `server/handlers.js` | весь API: checkout, claim, webhook/lava, event, admin/* |
 | `server/lava.js` | клиент Lava Top |
+| `server/telegram.js` | бот владельца (RU): визиты людей, «загрузил файл», «лимит», «Купить», продажи, итоги дня после 21:00 МСК (по первому событию, крона нет), лимит 30 алертов/час. Chat ID берётся сам из первого /start и хранится в KV `tg:chat` |
 | `functions/api/[[path]].js` | адаптер Cloudflare Pages Functions |
 | `api/router.js`, `vercel.json` | адаптер Vercel (старое превью) |
 | `scripts/` | деплой (`deploy-cloudflare.mjs`, `ship.mjs`), гайды, видео, ключи, статистика |
@@ -45,6 +46,7 @@
 - Тексты сайта — EN; кабинет, документы и отчёты — RU.
 
 ## Переменные окружения (значения — только в секретах)
-Сервер (Cloudflare Pages): `LAVA_API_KEY`, `LAVA_WEBHOOK_SECRET`, `LAVA_OFFER_ID`, `LAVA_PRODUCT_NAME`, `LAVA_OFFER_ID_IIF`, `LAVA_PRODUCT_NAME_IIF`, `LAVA_API_BASE` (опц.), `LICENSE_PRIVATE_JWK`, `ADMIN_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `SITE_URL`, привязка KV `LL_KV`.
+Сервер (Cloudflare Pages): `LAVA_API_KEY`, `LAVA_WEBHOOK_SECRET`, `LAVA_OFFER_ID`, `LAVA_PRODUCT_NAME`, `LAVA_OFFER_ID_IIF`, `LAVA_PRODUCT_NAME_IIF`, `LAVA_API_BASE` (опц.), `LICENSE_PRIVATE_JWK`, `ADMIN_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (опц., иначе авто), `SITE_URL`, привязка KV `LL_KV`.
 Скрипты: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_PAGES_PROJECT` (опц.), `CF_API_BASE` (опц.).
-Планируются (Aurora): `RESEND_API_KEY`, `CLARITY_PROJECT_ID`, `TELEGRAM_OWNER_CHAT_ID`.
+Планируются: `RESEND_API_KEY`, `CLARITY_PROJECT_ID`.
+Новые переменные среды сессии видны только в новой сессии; после их добавления — `npm run ship`, он синхронизирует секреты в Cloudflare.

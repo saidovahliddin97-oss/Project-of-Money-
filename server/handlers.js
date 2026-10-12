@@ -3,6 +3,7 @@
 
 import { lavaClient, LavaError } from './lava.js';
 import { signLicense } from '../public/assets/js/core/license.js';
+import { send, live, visitText, actionText, ALERT_EVENTS, maybeDigest } from './telegram.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
@@ -67,7 +68,7 @@ async function health(request, env) {
     checkoutIif: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_IIF),
     licensing: Boolean(privateKey(env)),
     webhookAuth: Boolean(env.LAVA_WEBHOOK_SECRET),
-    notifications: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+    notifications: Boolean(env.TELEGRAM_BOT_TOKEN),
     events: Boolean(env.LL_KV),
   });
 }
@@ -209,24 +210,24 @@ async function webhook(request, env, deps) {
         email: evt.buyer?.email || '', amount: Number(evt.amount) || 0, currency: evt.currency || 'USD', product: evt.product?.title || '', at: evt.timestamp || new Date().toISOString(),
       }));
     }
-    message = `✅ New sale: ${evt.amount} ${evt.currency} — ${evt.product?.title || 'product'} — ${evt.buyer?.email || ''}`;
+    message = `💰 Продажа: ${evt.amount} ${evt.currency} — ${evt.product?.title || 'товар'} — ${maskEmail(evt.buyer?.email)}`;
   } else if (type === 'payment.failed') {
     await record(env, ['payment_failed']);
-    message = `⚠️ Failed payment: ${evt.amount} ${evt.currency} — ${evt.errorMessage || 'no reason'}`;
+    message = `⚠️ Оплата не прошла: ${evt.amount} ${evt.currency} — ${evt.errorMessage || 'причина не указана'}`;
   } else if (type === 'refund.success') {
     const iifRefund = evt.data?.product?.product_name === (env.LAVA_PRODUCT_NAME_IIF || 'IIF Kit Pro');
     await record(env, [iifRefund ? 'iif_refund' : 'refund'], { [iifRefund ? 'refunds_iif' : 'refunds']: { [evt.data?.currency || 'USD']: Number(evt.data?.amount) || 0 } });
-    message = `↩️ Refund: ${evt.data?.amount} ${evt.data?.currency} — ${evt.data?.customer_email || ''}`;
+    message = `↩️ Возврат: ${evt.data?.amount} ${evt.data?.currency} — ${maskEmail(evt.data?.customer_email)}`;
     if (evt.data?.customer_email) await kvPut(env, `refunded:${String(evt.data.customer_email).toLowerCase()}`, evt.created_at || '1');
   } else if (type === 'chargeback.initiated') {
     await record(env, ['chargeback'], { refunds: { [evt.data?.currency || 'USD']: Number(evt.data?.amount) || 0 } });
-    message = `🚨 Chargeback: ${evt.data?.amount} ${evt.data?.currency} — ${evt.data?.reason_category || ''} — ${evt.data?.customer_email || ''}`;
+    message = `🚨 Чарджбэк: ${evt.data?.amount} ${evt.data?.currency} — ${evt.data?.reason_category || ''} — ${maskEmail(evt.data?.customer_email)}`;
   }
   if (message) await notify(env, deps, message);
   return json({ ok: true });
 }
 
-async function event(request, env) {
+async function event(request, env, deps = {}) {
   const body = await readJson(request, 2048);
   if (!EVENTS.has(body.name)) return json({ error: 'unknown event' }, 400);
   const ua = request.headers.get('User-Agent') || '';
@@ -247,10 +248,16 @@ async function event(request, env) {
     // Per-product counters for IIF Kit (everything under /iif).
     if (dims.pg.startsWith('/iif')) names.push(...names.map((n) => `iif_${n}`));
     await record(env, names, dims);
+    // Live alert only for likely humans: real browsers send Accept-Language, verified bots are skipped.
+    if (body.visit && request.headers.get('Accept-Language') && !request.cf?.botManagement?.verifiedBot) {
+      later(deps, live(env, deps, visitText({ ...dims, ref: dims.ref, src: dims.src })));
+    }
   } else {
     // Product-specific funnel events are prefixed: iif_file_loaded, iif_purchase…
     await record(env, [body.product === 'iif' ? `iif_${body.name}` : body.name]);
+    if (ALERT_EVENTS.has(body.name)) later(deps, live(env, deps, actionText(body.name, body.product, request.cf?.country || 'XX', deviceOf(ua))));
   }
+  later(deps, maybeDigest(env, deps));
   return new Response(null, { status: 204 });
 }
 
@@ -331,7 +338,7 @@ async function adminSummary(request, env) {
     checkoutIif: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_IIF),
       licensing: Boolean(privateKey(env)),
       webhookAuth: Boolean(env.LAVA_WEBHOOK_SECRET),
-      notifications: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
+      notifications: Boolean(env.TELEGRAM_BOT_TOKEN),
       siteUrl: env.SITE_URL || null,
     },
   });
@@ -437,21 +444,14 @@ function maskEmail(e) {
 }
 
 async function notify(env, deps, text) {
-  if (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID) return;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 4000);
-  try {
-    await (deps.fetch || fetch)(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: env.TELEGRAM_CHAT_ID, text, disable_web_page_preview: true }),
-      signal: ctrl.signal,
-    });
-  } catch {
-    /* a failed notification must not fail the webhook */
-  } finally {
-    clearTimeout(timer);
-  }
+  await send(env, deps, text); // never throws: a failed notification must not fail the webhook
+}
+
+// Run side work after the response when the platform allows it (Cloudflare waitUntil).
+function later(deps, promise) {
+  const safe = Promise.resolve(promise).catch(() => {});
+  if (deps.waitUntil) deps.waitUntil(safe);
+  return safe;
 }
 
 const ROUTES = {
