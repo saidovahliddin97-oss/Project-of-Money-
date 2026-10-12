@@ -1,0 +1,9 @@
+node_modules/
+package-lock.json
+public/assets/vendor/
+marketing/videos/
+tests/fixtures/pdf/
+tests/e2e/output/
+.wrangler/
+*.mp4
+*.png
