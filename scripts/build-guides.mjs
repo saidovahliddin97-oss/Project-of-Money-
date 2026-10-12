@@ -234,6 +234,37 @@ ${cta()}`,
 <p>Local processing is not a cure-all: keep your computer up to date, and store the exported files as carefully as the statements themselves.</p>
 ${cta('Convert locally — nothing is uploaded')}`,
   },
+  {
+    slug: 'convert-pdf-bank-statement-to-csv',
+    title: 'How to convert a PDF bank statement to CSV',
+    description: 'Turn a PDF bank statement into a clean CSV file with date, description and amount columns, without uploading it, and avoid the usual problems with dates, signs and delimiters.',
+    body: `
+<p>Most banks let you download statements as PDF, but a PDF is made for reading, not for sorting, filtering or importing. A CSV (comma-separated values) file opens in Excel, Google Sheets, Numbers and is accepted by most accounting and budgeting tools. This guide shows how to get from one to the other and what to check on the way.</p>
+<h2>Option 1: export CSV from online banking</h2>
+<p>If your bank offers a CSV or Excel export for the period you need, use it. It is the most accurate source. The catch: many banks only offer a limited history or no export at all for older months, and some only give PDFs for closed statement periods. That is where converting the PDF helps.</p>
+<h2>Option 2: convert the PDF in your browser</h2>
+<ol>
+  <li>Download the statement PDF from your bank. It must be a text-based PDF (you can select and copy text in it), not a photo or scan.</li>
+  <li>Open LocalLedger and drop the PDF onto the page. The file is read inside your browser and is not sent to a server.</li>
+  <li>Review the table of transactions: date, description and amount.</li>
+  <li>Check the reconciliation message. Opening balance plus the transactions should equal the closing balance.</li>
+  <li>Download the result as CSV.</li>
+</ol>
+<h2>What to check before you use the CSV</h2>
+<ul>
+  <li><strong>Balances reconcile.</strong> If they do not, a row is missing, duplicated or has the wrong sign. See <a href="/guides/check-converted-bank-transactions.html">how to check converted transactions</a>.</li>
+  <li><strong>Dates.</strong> Statements often print <code>03/04/2026</code>, which is 3 April in many countries and 4 March in the US. Compare the first and last rows with the statement period.</li>
+  <li><strong>Signs.</strong> Money out should be negative (or in a separate column), money in positive. A flipped sign is the most common error.</li>
+  <li><strong>Several months.</strong> If you combine statements, remove duplicate rows where periods overlap.</li>
+</ul>
+<h2>Opening the CSV in Excel without surprises</h2>
+<p>Excel decides how to read a CSV from your regional settings. In countries that use a comma as the decimal separator, Excel expects a semicolon as the list separator, so a comma-separated file may land in a single column. If that happens, use <em>Data → From Text/CSV</em> and pick the delimiter manually, or open the file in Google Sheets with <em>File → Import</em>. Long account or reference numbers can also lose leading zeros if Excel treats them as numbers; import those columns as text.</p>
+<h2>When CSV is not the best format</h2>
+<p>If your goal is an accounting system, a bank-feed format may save you work: see <a href="/guides/convert-csv-to-qif.html">CSV to QIF</a>, <a href="/guides/convert-csv-to-ofx.html">CSV to OFX</a>, or the step-by-step guides for <a href="/guides/import-bank-statement-into-quickbooks-online.html">QuickBooks Online</a> and <a href="/guides/import-bank-statement-into-xero.html">Xero</a>. For QuickBooks Desktop, which cannot import a bank CSV, use <a href="/iif">IIF Kit</a>. If you want a spreadsheet to work in directly, read <a href="/guides/convert-pdf-bank-statement-to-excel.html">PDF to Excel</a>.</p>
+<h2>Keep the files safe</h2>
+<p>Because conversion happens locally, nothing leaves your computer, but the CSV still contains your transactions. Store it like the original statement and delete copies you no longer need.</p>
+${cta()}`,
+  },
 ];
 
 const header = `  <header class="site-header">
