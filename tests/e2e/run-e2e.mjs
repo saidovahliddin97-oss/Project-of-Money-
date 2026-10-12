@@ -225,7 +225,7 @@ try {
   await step('mobile layout: no horizontal scroll on key pages', async () => {
     const m = await browser.newContext({ viewport: { width: 375, height: 800 }, isMobile: true, hasTouch: true });
     const mp = await m.newPage();
-    for (const path of ['/', '/app.html', '/guides/', '/guides/import-bank-statement-into-quickbooks-online.html', '/success.html', '/privacy.html']) {
+    for (const path of ['/', '/app.html', '/iif.html', '/guides/', '/guides/import-bank-statement-into-quickbooks-online.html', '/success.html', '/privacy.html']) {
       await mp.goto(BASE + path);
       const overflow = await mp.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       assert.ok(overflow <= 1, `${path} overflows by ${overflow}px`);
@@ -265,6 +265,24 @@ try {
     assert.ok(blob.ev.parse_ok >= 1);
     assert.ok(blob.ev.checkout_start >= 1);
     assert.ok(blob.ev.pageview >= 1, 'page views are counted');
+  });
+
+  await step('IIF Kit: sample CSV → rules → valid IIF download', async () => {
+    const p6 = await browser.newPage();
+    const errs = [];
+    p6.on('pageerror', (e) => errs.push(e.message));
+    await p6.goto(BASE + '/iif.html');
+    await p6.click('#btn-sample');
+    await p6.waitForFunction(() => document.querySelectorAll('#txn-body tr').length === 4, null, { timeout: 15000 });
+    const accounts = await p6.locator('#txn-body input').evaluateAll((els) => els.map((e) => e.value));
+    assert.deepEqual(accounts, ['Automobile:Fuel', 'Ask My Accountant', 'Office Supplies', 'Payroll Expenses']);
+    const [dl] = await Promise.all([p6.waitForEvent('download'), p6.click('#btn-export')]);
+    const iif = readFileSync(await dl.path(), 'utf8');
+    assert.ok(iif.startsWith('!TRNS\tTRNSTYPE'));
+    assert.match(iif, /TRNS\tCHECK\t1\/3\/2026\tChecking\t\t-45.10/);
+    assert.match(iif, /SPL\tDEPOSIT\t1\/5\/2026\tAsk My Accountant\t\t-1200.00/);
+    assert.deepEqual(errs, []);
+    await p6.close();
   });
 
   await step('no browser errors during the run', async () => {

@@ -46,7 +46,7 @@ test('health reports configuration without leaking secrets', async () => {
   const { env: e } = await env();
   const res = await handle(req('GET', '/api/health'), e);
   const body = await res.json();
-  assert.deepEqual(body, { ok: true, checkout: true, licensing: true, webhookAuth: true, notifications: true, events: true });
+  assert.deepEqual(body, { ok: true, checkout: true, checkoutIif: false, licensing: true, webhookAuth: true, notifications: true, events: true });
   assert.ok(!JSON.stringify(body).includes('test-key'));
 });
 
@@ -120,6 +120,27 @@ test('claim: unknown order is pending; a payment.success webhook unlocks it', as
   assert.equal((await verifyLicense(body.license, publicJwk)).valid, true);
   const day = JSON.parse(await e.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
   assert.equal(day.ev.purchase, 1, 'webhook + claim count one sale');
+});
+
+test('two products: checkout picks the offer, claim issues the matching plan', async () => {
+  const { env: e, publicJwk } = await env();
+  const e2 = { ...e, LAVA_PRODUCT_NAME: 'LocalLedger Pro', LAVA_OFFER_ID_IIF: 'iif-offer', LAVA_PRODUCT_NAME_IIF: 'IIF Kit Pro' };
+  const calls = [];
+  let productName = 'IIF Kit Pro';
+  const fetch = fakeFetch([
+    ['/api/v3/invoice', async () => ({ status: 201, body: { id: INV, paymentUrl: 'https://pay' } })],
+    [`/api/v1/invoices/${INV}`, async () => ({ body: { id: INV, status: 'COMPLETED', receipt: { amount: 29, currency: 'USD' }, buyer: { email: 'a@b.co' }, product: { name: productName } } })],
+  ], calls);
+  await handle(req('POST', '/api/checkout', { email: 'a@b.co', product: 'iif' }), e2, { fetch });
+  assert.equal(JSON.parse(calls[0].init.body).offerId, 'iif-offer');
+  let res = await handle(req('POST', '/api/claim', { invoiceId: INV }), e2, { fetch });
+  let body = await res.json();
+  assert.equal(body.plan, 'iif');
+  assert.equal((await verifyLicense(body.license, publicJwk)).plan, 'iif');
+  productName = 'Something Else';
+  res = await handle(req('POST', '/api/claim', { invoiceId: INV }), e2, { fetch });
+  assert.equal(res.status, 403);
+  assert.equal((await handle(req('POST', '/api/checkout', { email: 'a@b.co', product: 'iif' }), e)).status, 503, 'iif not configured');
 });
 
 test('webhook: auth required, idempotent, notifies seller', async () => {

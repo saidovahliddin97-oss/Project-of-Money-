@@ -64,6 +64,7 @@ async function health(request, env) {
   return json({
     ok: true,
     checkout: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID),
+    checkoutIif: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_IIF),
     licensing: Boolean(privateKey(env)),
     webhookAuth: Boolean(env.LAVA_WEBHOOK_SECRET),
     notifications: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),
@@ -79,18 +80,27 @@ async function pubkey(request, env) {
   return json({ jwk: { kty: key.kty, crv: key.crv, x: key.x, y: key.y } }, 200, { 'Cache-Control': 'public, max-age=3600' });
 }
 
+// Products sold through lava.top. Each has its own offer id and license plan.
+function products(env) {
+  const list = [];
+  if (env.LAVA_OFFER_ID) list.push({ key: 'ledger', plan: 'pro', offerId: env.LAVA_OFFER_ID, name: env.LAVA_PRODUCT_NAME || '' });
+  if (env.LAVA_OFFER_ID_IIF) list.push({ key: 'iif', plan: 'iif', offerId: env.LAVA_OFFER_ID_IIF, name: env.LAVA_PRODUCT_NAME_IIF || 'IIF Kit Pro' });
+  return list;
+}
+
 async function checkout(request, env, deps) {
-  if (!env.LAVA_API_KEY || !env.LAVA_OFFER_ID) {
+  const body = await readJson(request);
+  const product = products(env).find((p) => p.key === (body.product || 'ledger'));
+  if (!env.LAVA_API_KEY || !product) {
     return json({ error: 'Checkout is not available yet. Please try again later.' }, 503);
   }
-  const body = await readJson(request);
   const email = String(body.email || '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return json({ error: 'Please enter a valid email address.' }, 400);
   const currency = ['USD', 'EUR'].includes(body.currency) ? body.currency : 'USD';
   const base = siteUrl(env, request);
   const params = {
     email,
-    offerId: env.LAVA_OFFER_ID,
+    offerId: product.offerId,
     currency,
     buyerLanguage: 'EN',
     successful_return_url: `${base}/success.html`,
@@ -145,19 +155,22 @@ async function claim(request, env, deps) {
   }
   if (inv.status === 'NEW' || inv.status === 'IN_PROGRESS') return json({ status: 'pending' }, 202);
   if (inv.status !== 'COMPLETED') return json({ status: 'failed', error: 'This payment was not completed.' }, 402);
-  if (env.LAVA_PRODUCT_NAME && inv.product?.name && inv.product.name !== env.LAVA_PRODUCT_NAME) {
-    return json({ error: 'This order is for a different product.' }, 403);
-  }
+  // Map the purchased lava.top product to a license plan; refuse unknown products.
+  const catalogue = products(env);
+  const named = catalogue.filter((p) => p.name);
+  const match = inv.product?.name ? named.find((p) => p.name === inv.product.name) : null;
+  if (named.length && inv.product?.name && !match) return json({ error: 'This order is for a different product.' }, 403);
+  const plan = (match || catalogue[0] || { plan: 'pro' }).plan;
   if (!(inv.receipt?.amount > 0)) return json({ error: 'This order has no payment.' }, 402);
   const email = String(inv.buyer?.email || '').toLowerCase();
   if (!email) return json({ error: 'Order has no buyer email.' }, 422);
 
   const issuedAt = inv.datetime ? Math.floor(Date.parse(inv.datetime) / 1000) || undefined : undefined;
-  const license = await signLicense({ email, ref: id, plan: 'pro', issuedAt }, key);
+  const license = await signLicense({ email, ref: id, plan, issuedAt }, key);
   await kvPut(env, `license:${id}`, JSON.stringify({ email, issuedAt: issuedAt || null }));
   // The webhook is optional: a verified claim also counts the sale (once per order).
   await recordSale(env, id, Number(inv.receipt?.amount) || 0, inv.receipt?.currency, email, inv.product?.name);
-  return json({ status: 'completed', email, license });
+  return json({ status: 'completed', email, license, plan });
 }
 
 async function webhook(request, env, deps) {
@@ -247,7 +260,7 @@ async function adminIssue(request, env) {
   const email = String(body.email || '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return json({ error: 'Invalid email' }, 400);
   const ref = String(body.ref || `manual-${new Date().toISOString().slice(0, 10)}`).slice(0, 100);
-  const license = await signLicense({ email, ref, plan: 'pro' }, key);
+  const license = await signLicense({ email, ref, plan: body.plan === 'iif' ? 'iif' : 'pro' }, key);
   await kvPut(env, `license:${ref}`, JSON.stringify({ email, manual: true }));
   return json({ email, ref, license });
 }
@@ -311,6 +324,7 @@ async function adminSummary(request, env) {
     sales,
     config: {
       checkout: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID),
+    checkoutIif: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_IIF),
       licensing: Boolean(privateKey(env)),
       webhookAuth: Boolean(env.LAVA_WEBHOOK_SECRET),
       notifications: Boolean(env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_CHAT_ID),

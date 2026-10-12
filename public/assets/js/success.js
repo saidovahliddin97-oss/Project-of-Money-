@@ -24,6 +24,12 @@ async function run(invoiceId) {
       clearPendingInvoice();
       $('#license').value = r.license;
       $('#license-email').textContent = r.email;
+      // Send the buyer back to the product they paid for.
+      const back = document.querySelector('[data-state=done] a.btn');
+      if (back && r.plan === 'iif') {
+        back.href = '/iif';
+        back.textContent = 'Go to IIF Kit';
+      }
       show('done');
       return;
     }

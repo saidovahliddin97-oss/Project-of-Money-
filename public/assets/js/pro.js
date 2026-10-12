@@ -46,29 +46,34 @@ export function getPublicKey() {
   return pubkeyPromise;
 }
 
-let memoryLicense = null;
+
+// Each product has its own license plan: 'pro' (LocalLedger) or 'iif' (IIF Kit).
+const storageKey = (plan) => (plan === 'iif' ? `${LS_LICENSE}_iif` : LS_LICENSE);
+const memory = {};
 
 /** @returns {Promise<{pro: boolean, email?: string}>} */
-export async function getStatus() {
-  const key = memoryLicense || lsGet(LS_LICENSE);
+export async function getStatus(plan = 'pro') {
+  const key = memory[plan] || lsGet(storageKey(plan));
   if (!key) return { pro: false };
   const v = await verifyLicense(key, await getPublicKey());
-  return v.valid ? { pro: true, email: v.email } : { pro: false };
+  return v.valid && (v.plan || 'pro') === plan ? { pro: true, email: v.email } : { pro: false };
 }
 
-export async function activate(key) {
+export async function activate(key, expectedPlan) {
   const v = await verifyLicense(key, await getPublicKey());
   if (!v.valid) return v;
+  const plan = v.plan || 'pro';
+  if (expectedPlan && plan !== expectedPlan) return { valid: false, reason: `This key is for ${plan === 'iif' ? 'IIF Kit' : 'LocalLedger'}, not this product.` };
   const clean = key.trim().replace(/\s+/g, '');
-  memoryLicense = clean;
-  lsSet(LS_LICENSE, clean);
+  memory[plan] = clean;
+  lsSet(storageKey(plan), clean);
   track('license_activated');
   return v;
 }
 
-export function deactivate() {
-  memoryLicense = null;
-  lsSet(LS_LICENSE, null);
+export function deactivate(plan = 'pro') {
+  delete memory[plan];
+  lsSet(storageKey(plan), null);
 }
 
 export function pendingInvoice() {
@@ -102,12 +107,12 @@ try {
   /* ignore */
 }
 
-export async function startCheckout({ email, currency, method }) {
+export async function startCheckout({ email, currency, method, product = 'ledger' }) {
   track('checkout_start');
   const res = await fetch('/api/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, currency, method, utm: utmFromUrl() }),
+    body: JSON.stringify({ email, currency, method, product, utm: utmFromUrl() }),
   });
   let data = {};
   try {
@@ -138,7 +143,8 @@ export async function claim(invoiceId) {
 // ---------------------------------------------------------------------------
 // Upgrade dialog (markup lives in each page as <dialog id="pro-dialog">)
 
-export function initProDialog({ onActivated } = {}) {
+export function initProDialog({ onActivated, product = 'ledger', prices = { USD: CONFIG.PRICE_USD, EUR: CONFIG.PRICE_EUR } } = {}) {
+  const plan = product === 'iif' ? 'iif' : 'pro';
   const dlg = document.getElementById('pro-dialog');
   if (!dlg) return { open() {} };
   const form = dlg.querySelector('#checkout-form');
@@ -148,7 +154,7 @@ export function initProDialog({ onActivated } = {}) {
   const priceEl = dlg.querySelector('[data-price]');
   const cur = dlg.querySelector('#checkout-currency');
   const setPrice = () => {
-    if (priceEl) priceEl.textContent = cur && cur.value === 'EUR' ? `€${CONFIG.PRICE_EUR}` : `$${CONFIG.PRICE_USD}`;
+    if (priceEl) priceEl.textContent = cur && cur.value === 'EUR' ? `€${prices.EUR}` : `$${prices.USD}`;
   };
   cur?.addEventListener('change', setPrice);
   setPrice();
@@ -164,6 +170,7 @@ export function initProDialog({ onActivated } = {}) {
         email: form.email.value,
         currency: cur ? cur.value : 'USD',
         method: form.method ? form.method.value : 'card',
+        product,
       });
     } catch (ex) {
       err.textContent = ex.message;
@@ -174,7 +181,7 @@ export function initProDialog({ onActivated } = {}) {
 
   actForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const v = await activate(actForm.key.value);
+    const v = await activate(actForm.key.value, plan);
     actMsg.textContent = v.valid ? `Activated for ${v.email}. Thank you!` : v.reason;
     actMsg.className = v.valid ? 'ok' : 'error';
     if (v.valid) {

@@ -319,7 +319,7 @@ ${cta('Open the converter')}`,
   }),
 );
 
-const urls = ['/', '/app.html', '/guides/', ...guides.map((g) => `/guides/${g.slug}.html`), '/privacy.html', '/terms.html'];
+const urls = ['/', '/app.html', '/iif', '/guides/', ...guides.map((g) => `/guides/${g.slug}.html`), '/privacy.html', '/terms.html'];
 writeFileSync(
   join(root, 'public', 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}${u}</loc><lastmod>${UPDATED}</lastmod></url>`).join('\n')}\n</urlset>\n`,
