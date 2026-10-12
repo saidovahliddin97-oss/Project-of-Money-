@@ -259,9 +259,9 @@ function renderChart(series) {
   const pad = { l: 34, r: 8, t: 10, b: 24 };
   const n = series.length;
   const keys = [
-    ['visit', '#0f766e'],
-    ['file_loaded', '#f59e0b'],
-    ['purchase', '#6366f1'],
+    ['visit', '#00E0C6'],
+    ['file_loaded', '#B6FF3C'],
+    ['purchase', '#6A5BFF'],
   ];
   const max = Math.max(1, ...series.flatMap((s) => keys.map(([k]) => s.ev[k] || 0)));
   const step = (W - pad.l - pad.r) / Math.max(1, n);

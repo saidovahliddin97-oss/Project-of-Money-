@@ -352,6 +352,7 @@ function page({ title, description, path, body, jsonLd }) {
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:image" content="${SITE}/assets/img/og.png">
   <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/ui.js"></script>
   <script src="/assets/js/pv.js" defer></script>
 ${jsonLd ? `  <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>\n` : ''}</head>
 <body>

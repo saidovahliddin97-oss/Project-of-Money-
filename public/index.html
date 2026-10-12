@@ -12,7 +12,9 @@
   <meta property="og:description" content="PDF/CSV statements → Excel, CSV, QuickBooks, Xero, QIF, OFX. Processed on your device, never uploaded.">
   <meta property="og:image" content="https://localledger-40f.pages.dev/assets/img/og.png">
   <meta name="twitter:card" content="summary_large_image">
+  <link rel="preload" href="/assets/fonts/unbounded-lat.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/ui.js"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -42,7 +44,8 @@
   <main>
     <section class="container hero">
       <div>
-        <h1>Bank statements to Excel, QuickBooks &amp; Xero — without uploading them anywhere</h1>
+        <p class="eyebrow">Private statement converter</p>
+        <h1>Bank statements to Excel, QuickBooks &amp; Xero — <em>without uploading them anywhere</em></h1>
         <p class="lead">Drop a PDF or CSV statement and get clean, reviewable transactions in seconds. LocalLedger runs entirely in your browser, so account numbers and balances never touch a server.</p>
         <div class="hero-cta">
           <a class="btn btn-large" href="/app.html">Convert a statement — free</a>
@@ -55,13 +58,13 @@
 01/03  RENT PAYMENT ONLINE TRANSFER -1,800.00   3,900.00
        REF 99812 CONFIRMATION 5512
 01/05  COFFEE HOUSE #123 SEATTLE WA     -4.50   3,895.50</div>
-        <p class="arrow">↓ LocalLedger ↓</p>
+        <p class="arrow">↓ parsed on your device ↓</p>
         <table>
           <tr><td>2026-01-02</td><td>PAYROLL DEPOSIT ACME CORP</td><td class="pos">3,200.00</td></tr>
           <tr><td>2026-01-03</td><td>RENT PAYMENT ONLINE TRANSFER REF 99812…</td><td class="neg">-1,800.00</td></tr>
           <tr><td>2026-01-05</td><td>COFFEE HOUSE #123 SEATTLE WA</td><td class="neg">-4.50</td></tr>
         </table>
-        <p class="arrow">✓ Balances reconcile: 2,500.00 → 3,498.18</p>
+        <p class="arrow">Balances reconcile · 2,500.00 → 3,498.18</p>
       </div>
     </section>
 
