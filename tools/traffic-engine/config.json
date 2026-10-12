@@ -1,0 +1,35 @@
+{
+  "product": {
+    "name": "LocalLedger",
+    "url": "https://localledger-40f.pages.dev",
+    "pitch": "a free-to-try converter that turns PDF/CSV bank statements into Excel, CSV, QuickBooks Online, Xero, QIF or OFX entirely in the browser (files are not uploaded), with a balance reconciliation check",
+    "limitations": "text-based PDFs only (no OCR for scans); Pro costs $29 one-time for unlimited exports"
+  },
+  "keywords": [
+    "bank statement pdf to excel",
+    "bank statement pdf to csv",
+    "convert bank statement",
+    "import bank statement quickbooks",
+    "import bank statement xero",
+    "csv to qif",
+    "csv to ofx",
+    "qfx import csv",
+    "credit card statement csv",
+    "extract transactions from pdf"
+  ],
+  "sources": {
+    "stackexchange": { "enabled": true, "sites": ["money", "superuser", "webapps"], "perKeyword": 5 },
+    "hackernews": { "enabled": true, "perKeyword": 5 },
+    "medium": { "enabled": true, "tags": ["bookkeeping", "quickbooks", "personal-finance", "accounting"] }
+  },
+  "minRelevance": 0.45,
+  "maxAgeDays": 730,
+  "maxRequestsPerRun": 60,
+  "requestDelayMs": 400,
+  "maxRepliesPerRun": 15,
+  "linkPolicy": {
+    "stackexchange": "disclose",
+    "hackernews": "none",
+    "medium": "disclose"
+  }
+}

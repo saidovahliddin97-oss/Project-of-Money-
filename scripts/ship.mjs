@@ -19,7 +19,7 @@ function run(label, cmd, args, env = {}) {
 }
 
 run('guides', 'node', ['scripts/build-guides.mjs'], { SITE_URL: SITE });
-const unit = run('unit tests', 'node', ['--test', 'tests/unit/**/*.test.mjs']);
+const unit = run('unit tests', 'node', ['--test', 'tests/unit/**/*.test.mjs', 'tools/**/tests/*.test.mjs']);
 console.log(`✔ unit tests ${(unit.match(/# pass (\d+)/) || [])[1]} passed`);
 
 const changed = spawnSync('git', ['diff', '--name-only', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout;

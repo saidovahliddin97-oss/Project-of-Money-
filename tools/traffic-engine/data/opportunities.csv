@@ -1,0 +1,56 @@
+source,source_url,keyword,title,discovered_at,created_at,relevance_score,generated_reply,reply_engine,publication_status,last_error
+hackernews,https://news.ycombinator.com/item?id=47421742,bank statement pdf to excel,Show HN: Bank Parser – Convert US Bank Statement PDFs to QuickBooks-Ready Excel,2026-10-12T11:39:55.296Z,2026-03-18T04:59:37Z,0.86,,none,competitor_intel,
+hackernews,https://news.ycombinator.com/item?id=47316687,credit card statement csv,Ask HN: General API for accessing bank transactions?,2026-10-12T11:39:55.296Z,2026-03-09T22:37:40Z,0.85,"A few things that usually save time when getting statement data into Excel:
+
+1. Check online banking first — many banks let you export CSV/OFX for recent months, which is cleaner than any PDF conversion.
+2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
+3. Aim for .xlsx or CSV; keep one consistent date format and money-out as negative amounts.
+4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.
+5. Card statements show purchases as positive numbers; most accounting apps expect them negative, so flip the signs.",template,needs_human_review,
+hackernews,https://news.ycombinator.com/item?id=46064100,bank statement pdf to csv,Show HN: Statements to Sheets – Convert Bank Statement PDFs to CSV,2026-10-12T11:39:55.296Z,2025-11-27T00:47:16Z,0.72,,none,competitor_intel,
+hackernews,https://news.ycombinator.com/item?id=47196050,qfx import csv,Show HN: Ditch your budget app subscription. Surebeans is a modern YNAB4,2026-10-12T11:39:55.296Z,2026-02-28T14:56:24Z,0.71,,none,competitor_intel,
+hackernews,https://news.ycombinator.com/item?id=47771898,bank statement pdf to csv,BankToCSV – Convert bank statement PDFs to clean CSVs,2026-10-12T11:39:55.296Z,2026-04-14T21:45:00Z,0.66,"A few things that usually save time when getting PDF statements into a spreadsheet:
+
+1. Check online banking first — many banks let you export CSV/OFX for recent months, which is cleaner than any PDF conversion.
+2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
+3. Aim for CSV; keep one consistent date format and money-out as negative amounts.
+4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.",template,needs_human_review,
+hackernews,https://news.ycombinator.com/item?id=46998174,bank statement pdf to csv,Robust ways to extract bank statements from PDF to CSV beyond raw LLMs?,2026-10-12T11:39:55.296Z,2026-02-13T02:23:34Z,0.64,"A few things that usually save time when getting PDF statements into a spreadsheet:
+
+1. Check online banking first — many banks let you export CSV/OFX for recent months, which is cleaner than any PDF conversion.
+2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
+3. Aim for CSV; keep one consistent date format and money-out as negative amounts.
+4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.",template,needs_human_review,
+hackernews,https://news.ycombinator.com/item?id=48695807,bank statement pdf to excel,"Show HN: Statemently – Bank statement PDFs to Excel/CSV, totals verified",2026-10-12T11:39:55.296Z,2026-06-27T06:48:50Z,0.63,,none,competitor_intel,
+hackernews,https://news.ycombinator.com/item?id=45802267,import bank statement xero,"Show HN: FinBodhi – Local-first, double-entry app/PWA for your financial journey",2026-10-12T11:39:55.296Z,2025-11-03T18:15:22Z,0.59,,none,competitor_intel,
+hackernews,https://news.ycombinator.com/item?id=49237475,bank statement pdf to csv,Bank statement PDF to CSV that runs in the browser,2026-10-12T11:39:55.296Z,2026-08-09T23:44:45Z,0.57,"A few things that usually save time when getting PDF statements into a spreadsheet:
+
+1. Check online banking first — many banks let you export CSV/OFX for recent months, which is cleaner than any PDF conversion.
+2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
+3. Aim for CSV; keep one consistent date format and money-out as negative amounts.
+4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.",template,needs_human_review,
+hackernews,https://news.ycombinator.com/item?id=48860322,bank statement pdf to excel,"Show HN: Bank statement PDF to Excel, checked against its own balances",2026-10-12T11:39:55.296Z,2026-07-10T14:19:40Z,0.56,,none,competitor_intel,
+hackernews,https://news.ycombinator.com/item?id=46590116,convert bank statement,Show HN: Convert bank statement PDFs to Tables,2026-10-12T11:39:55.296Z,2026-01-12T15:54:50Z,0.56,,none,competitor_intel,
+hackernews,https://news.ycombinator.com/item?id=46669681,import bank statement xero,"Show HN: TrackMyRupee – A privacy-first, manual expense tracker for India",2026-10-12T11:39:55.296Z,2026-01-18T17:10:17Z,0.56,,none,competitor_intel,
+medium:quickbooks,https://medium.com/@qbooksupport/quickbooks-online-bank-feed-not-updating-10-fixes-2026-a7fb03677961,tag:quickbooks,QuickBooks Online Bank Feed Not Updating? 10 Fixes (2026),2026-10-12T11:39:55.296Z,2026-10-12T07:32:20.000Z,0.54,"A few things that usually save time when getting statement data into QuickBooks:
+
+1. Check online banking first — many banks let you export CSV/OFX for recent months, which is cleaner than any PDF conversion.
+2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
+3. Aim for a 3-column CSV (Date, Description, Amount); keep one consistent date format and money-out as negative amounts.
+4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.
+
+Disclosure: I built LocalLedger (https://localledger-40f.pages.dev), a free-to-try converter that turns PDF/CSV bank statements into Excel, CSV, QuickBooks Online, Xero, QIF or OFX entirely in the browser (files are not uploaded), with a balance reconciliation check. Limitations: text-based PDFs only (no OCR for scans); Pro costs $29 one-time for unlimited exports. Happy to hear if it fails on your bank's layout.",template,needs_human_review,
+medium:quickbooks,https://medium.com/@techblogger2356/how-to-convert-csv-to-qbo-for-free-no-column-mapping-f9792532b4e1,tag:quickbooks,How to Convert CSV to QBO for Free (No Column Mapping),2026-10-12T11:39:55.296Z,2026-10-06T12:46:52.000Z,0.54,"A few things that usually save time when getting statement data into QuickBooks:
+
+1. Check online banking first — many banks let you export CSV/OFX for recent months, which is cleaner than any PDF conversion.
+2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
+3. Aim for a 3-column CSV (Date, Description, Amount); keep one consistent date format and money-out as negative amounts.
+4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.
+
+Disclosure: I built LocalLedger (https://localledger-40f.pages.dev), a free-to-try converter that turns PDF/CSV bank statements into Excel, CSV, QuickBooks Online, Xero, QIF or OFX entirely in the browser (files are not uploaded), with a balance reconciliation check. Limitations: text-based PDFs only (no OCR for scans); Pro costs $29 one-time for unlimited exports. Happy to hear if it fails on your bank's layout.",template,needs_human_review,
+hackernews,https://news.ycombinator.com/item?id=44689842,bank statement pdf to excel,Convert PDF Banks Statement to Excel,2026-10-12T11:39:55.296Z,2025-07-25T23:43:51Z,0.48,"A few things that usually save time when getting PDF statements into Excel:
+
+1. Check online banking first — many banks let you export CSV/OFX for recent months, which is cleaner than any PDF conversion.
+2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
+3. Aim for .xlsx or CSV; keep one consistent date format and money-out as negative amounts.
+4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.",template,needs_human_review,

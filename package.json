@@ -13,7 +13,7 @@
     "keys": "node scripts/gen-keys.mjs",
     "issue-license": "node scripts/issue-license.mjs",
     "fixtures": "node tests/fixtures/make-pdfs.mjs",
-    "test": "node --test \"tests/unit/**/*.test.mjs\"",
+    "test": "node --test \"tests/unit/**/*.test.mjs\" \"tools/**/tests/*.test.mjs\"",
     "test:e2e": "node tests/e2e/run-e2e.mjs",
     "dev": "node scripts/dev-server.mjs 8787",
     "dev:cf": "npx wrangler@4.139.0 pages dev public --compatibility-date=2026-09-01 --kv LL_KV",
@@ -22,7 +22,9 @@
     "deploy:cf": "node scripts/deploy-cloudflare.mjs",
     "indexnow": "node scripts/indexnow.mjs",
     "stats": "node scripts/stats.mjs",
-    "ship": "node scripts/ship.mjs"
+    "ship": "node scripts/ship.mjs",
+    "traffic": "node tools/traffic-engine/run.mjs --live",
+    "traffic:dry": "node tools/traffic-engine/run.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "6.3.289"
