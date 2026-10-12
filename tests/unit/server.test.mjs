@@ -208,6 +208,26 @@ test('pageviews record country, device, referrer; admin summary aggregates them'
   assert.equal(sum.config.licensing, true);
 });
 
+test('IIF Kit analytics are counted separately', async () => {
+  const { env: e } = await env();
+  const r = req('POST', '/api/event', { name: 'pageview', path: '/iif', visit: true, ref: 'google.com' }, { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0)' });
+  await handle(r, e);
+  await handle(req('POST', '/api/event', { name: 'file_loaded', product: 'iif' }), e);
+  await handle(req('POST', '/api/event', { name: 'file_loaded' }), e);
+  const day = JSON.parse(await e.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
+  assert.equal(day.ev.iif_pageview, 1);
+  assert.equal(day.ev.iif_visit, 1);
+  assert.equal(day.ev.iif_file_loaded, 1);
+  assert.equal(day.ev.file_loaded, 1);
+  const fetch = fakeFetch([['api.telegram.org', async () => ({ body: {} })]], []);
+  const sale = { eventType: 'payment.success', product: { title: 'IIF Kit Pro' }, buyer: { email: 'x@y.co' }, contractId: '11111111-2222-3333-4444-555555555555', amount: 29, currency: 'USD' };
+  await handle(req('POST', '/api/webhook/lava', sale, { 'X-Api-Key': 'whsec' }), e, { fetch });
+  const day2 = JSON.parse(await e.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
+  assert.equal(day2.ev.iif_purchase, 1);
+  assert.equal(day2.ev.purchase, undefined);
+  assert.deepEqual(day2.gross_iif, { USD: 29 });
+});
+
 test('pubkey endpoint exposes only the public half', async () => {
   const { env: e, publicJwk } = await env();
   const body = await (await handle(req('GET', '/api/pubkey'), e)).json();

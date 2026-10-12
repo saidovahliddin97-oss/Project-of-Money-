@@ -214,7 +214,8 @@ async function webhook(request, env, deps) {
     await record(env, ['payment_failed']);
     message = `⚠️ Failed payment: ${evt.amount} ${evt.currency} — ${evt.errorMessage || 'no reason'}`;
   } else if (type === 'refund.success') {
-    await record(env, ['refund'], { refunds: { [evt.data?.currency || 'USD']: Number(evt.data?.amount) || 0 } });
+    const iifRefund = evt.data?.product?.product_name === (env.LAVA_PRODUCT_NAME_IIF || 'IIF Kit Pro');
+    await record(env, [iifRefund ? 'iif_refund' : 'refund'], { [iifRefund ? 'refunds_iif' : 'refunds']: { [evt.data?.currency || 'USD']: Number(evt.data?.amount) || 0 } });
     message = `↩️ Refund: ${evt.data?.amount} ${evt.data?.currency} — ${evt.data?.customer_email || ''}`;
     if (evt.data?.customer_email) await kvPut(env, `refunded:${String(evt.data.customer_email).toLowerCase()}`, evt.created_at || '1');
   } else if (type === 'chargeback.initiated') {
@@ -243,9 +244,12 @@ async function event(request, env) {
       dims.ref = cleanHost(body.ref) || '(direct)';
       if (body.src) dims.src = String(body.src).slice(0, 60).toLowerCase();
     }
+    // Per-product counters for IIF Kit (everything under /iif).
+    if (dims.pg.startsWith('/iif')) names.push(...names.map((n) => `iif_${n}`));
     await record(env, names, dims);
   } else {
-    await record(env, [body.name]);
+    // Product-specific funnel events are prefixed: iif_file_loaded, iif_purchase…
+    await record(env, [body.product === 'iif' ? `iif_${body.name}` : body.name]);
   }
   return new Response(null, { status: 204 });
 }
@@ -367,7 +371,7 @@ async function record(env, names, dims = {}) {
       d[dim][k] = (d[dim][k] || 0) + 1;
       prune(d[dim]);
     }
-    for (const money of ['gross', 'refunds']) {
+    for (const money of ['gross', 'gross_iif', 'refunds', 'refunds_iif']) {
       if (!dims[money]) continue;
       d[money] ??= {};
       for (const [cur, amt] of Object.entries(dims[money])) d[money][cur.toUpperCase()] = Math.round(((d[money][cur.toUpperCase()] || 0) + amt) * 100) / 100;
@@ -383,7 +387,8 @@ async function recordSale(env, id, amount, currency, email, product) {
   try {
     if (await env.LL_KV.get(`sold:${id}`)) return;
     await env.LL_KV.put(`sold:${id}`, '1');
-    await record(env, ['purchase'], { gross: { [currency || 'USD']: amount } });
+    const iif = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_IIF || 'IIF Kit Pro');
+    await record(env, [iif ? 'iif_purchase' : 'purchase'], { [iif ? 'gross_iif' : 'gross']: { [currency || 'USD']: amount } });
     await env.LL_KV.put(`sale:${new Date().toISOString()}:${id}`, JSON.stringify({ amount, currency: currency || 'USD', product: product || '', email: maskEmail(email) }));
   } catch {
     /* best-effort */

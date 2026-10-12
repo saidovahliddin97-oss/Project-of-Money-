@@ -29,7 +29,11 @@
     <header class="adm-head">
       <a class="brand" href="/" target="_blank" rel="noopener"><img src="/assets/img/logo.svg" alt="" width="26" height="26"> LocalLedger</a>
       <div class="adm-controls">
-        <div class="seg" role="group" aria-label="Период">
+        <div class="seg" role="group" aria-label="Проект" id="proj">
+          <button type="button" data-proj="ledger" class="on">LocalLedger</button>
+          <button type="button" data-proj="iif">IIF Kit</button>
+        </div>
+        <div class="seg" role="group" aria-label="Период" id="period">
           <button type="button" data-days="1">День</button>
           <button type="button" data-days="7">7 дней</button>
           <button type="button" data-days="30" class="on">30 дней</button>
@@ -80,6 +84,7 @@
         <ul id="health" class="health"></ul>
       </section>
 
+      <p class="muted small" id="scope-note"></p>
       <p class="muted small">Данные собираются без cookies и без персональных данных; счётчики приблизительные. Боты исключены.</p>
     </main>
   </div>

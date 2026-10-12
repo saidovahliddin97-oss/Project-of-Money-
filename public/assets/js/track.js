@@ -1,10 +1,11 @@
-// Anonymous funnel counters (event name only — never file contents or emails).
+// Anonymous funnel counters (event name and product only — never file contents or emails).
 const sent = new Set();
 export function track(name, { once = false } = {}) {
   if (once && sent.has(name)) return;
   sent.add(name);
   try {
-    const body = JSON.stringify({ name });
+    const product = document.body?.dataset.product || undefined;
+    const body = JSON.stringify({ name, product });
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/api/event', new Blob([body], { type: 'application/json' }));
     } else {

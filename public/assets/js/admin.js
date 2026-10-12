@@ -2,6 +2,8 @@
 const $ = (s) => document.querySelector(s);
 const LS = 'll_admin_token';
 let days = 30;
+let proj = location.hash.includes('iif') ? 'iif' : 'ledger';
+let lastData = null;
 
 const store = {
   get() {
@@ -94,7 +96,42 @@ function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 }
 
-function render(d) {
+// The API returns site-wide counters; IIF Kit events are prefixed with "iif_".
+// Build the view for the selected project.
+function viewEv(ev = {}) {
+  const out = {};
+  if (proj === 'iif') {
+    for (const [k, v] of Object.entries(ev)) if (k.startsWith('iif_')) out[k.slice(4)] = v;
+    return out;
+  }
+  for (const [k, v] of Object.entries(ev)) if (!k.startsWith('iif_')) out[k] = v;
+  for (const k of ['visit', 'pageview']) out[k] = Math.max(0, (ev[k] || 0) - (ev[`iif_${k}`] || 0));
+  return out;
+}
+
+function projectView(d) {
+  const pick = (block) => ({
+    ...block,
+    ev: viewEv(block.ev),
+    gross: (proj === 'iif' ? block.gross_iif : block.gross) || {},
+    refunds: (proj === 'iif' ? block.refunds_iif : block.refunds) || {},
+    pg: Object.fromEntries(Object.entries(block.pg || {}).filter(([k]) => (proj === 'iif') === k.startsWith('/iif'))),
+  });
+  const isIif = (s) => /iif/i.test(s.product || '');
+  return {
+    ...d,
+    current: pick(d.current),
+    previous: pick(d.previous),
+    series: d.series.map((x) => ({ ...x, ev: viewEv(x.ev) })),
+    sales: d.sales.filter((s) => (proj === 'iif') === isIif(s)),
+    config: { ...d.config, checkout: proj === 'iif' ? d.config.checkoutIif : d.config.checkout },
+  };
+}
+
+function render(raw) {
+  lastData = raw;
+  const d = projectView(raw);
+  $('#scope-note').textContent = 'Источники, страны и устройства — по всему сайту (оба проекта).';
   const c = d.current.ev || {};
   const p = d.previous.ev || {};
   const gross = d.current.gross || {};
@@ -259,11 +296,20 @@ $('#logout').addEventListener('click', () => {
   show('login');
 });
 $('#refresh').addEventListener('click', load);
-document.querySelectorAll('.seg button').forEach((b) =>
+document.querySelectorAll('#period button').forEach((b) =>
   b.addEventListener('click', () => {
-    document.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
+    document.querySelectorAll('#period button').forEach((x) => x.classList.toggle('on', x === b));
     days = Number(b.dataset.days);
     load();
   }),
 );
+document.querySelectorAll('#proj button').forEach((b) => {
+  b.classList.toggle('on', b.dataset.proj === proj);
+  b.addEventListener('click', () => {
+    proj = b.dataset.proj;
+    document.querySelectorAll('#proj button').forEach((x) => x.classList.toggle('on', x === b));
+    history.replaceState(null, '', proj === 'iif' ? '#iif' : location.pathname);
+    if (lastData) render(lastData);
+  });
+});
 load();
