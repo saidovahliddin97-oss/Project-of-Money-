@@ -26,7 +26,7 @@ const COMPAT_DATE = '2026-09-01';
 const WRANGLER = 'wrangler@4.139.0';
 const API = process.env.CF_API_BASE || 'https://api.cloudflare.com/client/v4'; // overridable for tests
 const SECRET_KEYS = ['LAVA_API_KEY', 'LAVA_WEBHOOK_SECRET', 'TELEGRAM_BOT_TOKEN', 'ADMIN_TOKEN'];
-const PLAIN_KEYS = ['LAVA_OFFER_ID', 'LAVA_PRODUCT_NAME', 'TELEGRAM_CHAT_ID'];
+const PLAIN_KEYS = ['LAVA_OFFER_ID', 'LAVA_PRODUCT_NAME', 'LAVA_OFFER_ID_IIF', 'LAVA_PRODUCT_NAME_IIF', 'TELEGRAM_CHAT_ID'];
 
 if (!TOKEN || !ACCOUNT) {
   console.error('Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (see docs/DEPLOY.md).');

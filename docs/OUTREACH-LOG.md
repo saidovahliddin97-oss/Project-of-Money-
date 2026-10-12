@@ -5,4 +5,4 @@
 
 | Дата | Фирма | Email | Источник | Статус |
 |---|---|---|---|---|
-| 2026-10-12 | Saving Grace Bookkeeping (Ohio, QBO ProAdvisor) | sgbookkeeping20@gmail.com | kapprofessionals.org directory | черновик создан, ждёт отправки |
+| 2026-10-12 | Saving Grace Bookkeeping (Ohio, QBO ProAdvisor) | sgbookkeeping20@gmail.com | kapprofessionals.org directory | отправлено 2026-10-12 11:19 UTC; ответа пока нет |
