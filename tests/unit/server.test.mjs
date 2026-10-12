@@ -106,6 +106,22 @@ test('claim issues a license only for COMPLETED invoices', async () => {
   assert.deepEqual(day.gross, { USD: 29 });
 });
 
+test('claim: unknown order is pending; a payment.success webhook unlocks it', async () => {
+  const { env: e, publicJwk } = await env();
+  const fetch = fakeFetch([[`/api/v1/invoices/${INV}`, async () => ({ status: 404, body: { error: 'not found' } })], ['api.telegram.org', async () => ({ body: {} })]], []);
+  let res = await handle(req('POST', '/api/claim', { invoiceId: INV }), e, { fetch });
+  assert.equal(res.status, 202);
+  const payload = { eventType: 'payment.success', product: { title: 'LocalLedger Pro' }, buyer: { email: 'Paid@Example.com' }, contractId: INV, amount: 29, currency: 'USD', timestamp: '2026-10-12T10:00:00Z', status: 'completed' };
+  await handle(req('POST', '/api/webhook/lava', payload, { 'X-Api-Key': 'whsec' }), e, { fetch });
+  res = await handle(req('POST', '/api/claim', { invoiceId: INV }), e, { fetch });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.email, 'paid@example.com');
+  assert.equal((await verifyLicense(body.license, publicJwk)).valid, true);
+  const day = JSON.parse(await e.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
+  assert.equal(day.ev.purchase, 1, 'webhook + claim count one sale');
+});
+
 test('webhook: auth required, idempotent, notifies seller', async () => {
   const { env: e } = await env();
   const calls = [];

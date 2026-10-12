@@ -27,7 +27,7 @@ async function run(invoiceId) {
       show('done');
       return;
     }
-    if (r.httpStatus === 202 && Date.now() - started < 180000) {
+    if (r.httpStatus === 202 && Date.now() - started < 600000) {
       $('#checking-msg').textContent = 'Waiting for the payment provider to confirm your payment…';
       await new Promise((res) => setTimeout(res, 4000));
       continue;

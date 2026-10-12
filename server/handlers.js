@@ -126,15 +126,23 @@ async function claim(request, env, deps) {
   const id = String(body.invoiceId || '').trim();
   if (!UUID_RE.test(id)) return json({ error: 'Invalid order id.' }, 400);
 
+  // 1) A payment.success webhook already confirmed this order (preferred: lava.top
+  //    only exposes contracts through the API once a payment has started).
+  const paidRaw = env.LL_KV ? await env.LL_KV.get(`paid:${id}`) : null;
   let inv;
-  try {
-    inv = await lava(env, deps).getInvoice(id);
-  } catch (e) {
-    if (e instanceof LavaError && (e.status === 404 || e.status === 400)) return json({ error: 'Order not found.' }, 404);
-    if (e instanceof LavaError) return json({ error: 'Could not reach the payment provider. Please retry.' }, 502);
-    throw e;
+  if (paidRaw) {
+    const p = JSON.parse(paidRaw);
+    inv = { status: 'COMPLETED', datetime: p.at, receipt: { amount: p.amount, currency: p.currency }, buyer: { email: p.email }, product: { name: p.product } };
+  } else {
+    // 2) Otherwise ask lava.top directly. Never trust the browser's word about payment.
+    try {
+      inv = await lava(env, deps).getInvoice(id);
+    } catch (e) {
+      if (e instanceof LavaError && (e.status === 404 || e.status === 400)) return json({ status: 'pending' }, 202);
+      if (e instanceof LavaError) return json({ error: 'Could not reach the payment provider. Please retry.' }, 502);
+      throw e;
+    }
   }
-  // Never trust the browser's word about payment — only the provider's status.
   if (inv.status === 'NEW' || inv.status === 'IN_PROGRESS') return json({ status: 'pending' }, 202);
   if (inv.status !== 'COMPLETED') return json({ status: 'failed', error: 'This payment was not completed.' }, 402);
   if (env.LAVA_PRODUCT_NAME && inv.product?.name && inv.product.name !== env.LAVA_PRODUCT_NAME) {
@@ -183,6 +191,11 @@ async function webhook(request, env, deps) {
   let message = null;
   if (type === 'payment.success') {
     await recordSale(env, evt.contractId, Number(evt.amount) || 0, evt.currency, evt.buyer?.email, evt.product?.title);
+    if (evt.contractId) {
+      await kvPut(env, `paid:${evt.contractId}`, JSON.stringify({
+        email: evt.buyer?.email || '', amount: Number(evt.amount) || 0, currency: evt.currency || 'USD', product: evt.product?.title || '', at: evt.timestamp || new Date().toISOString(),
+      }));
+    }
     message = `✅ New sale: ${evt.amount} ${evt.currency} — ${evt.product?.title || 'product'} — ${evt.buyer?.email || ''}`;
   } else if (type === 'payment.failed') {
     await record(env, ['payment_failed']);

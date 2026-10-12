@@ -15,7 +15,7 @@ while (url) {
   }
   const page = await res.json();
   for (const item of page.items || []) {
-    const p = item.data || {};
+    const p = item.data || item;
     if (!p.offers) continue;
     console.log(`\nProduct: ${p.title}  (product id ${p.id})`);
     for (const o of p.offers) {
