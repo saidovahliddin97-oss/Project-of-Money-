@@ -74,3 +74,29 @@ test('event endpoint alerts on a human visit, not on curl', async () => {
   const visits = calls.filter((c) => /новый визит/.test(c.body.text || ''));
   assert.equal(visits.length, 1);
 });
+
+test('webhook: secret required, /start pins the owner, strangers are refused, /stats answers', async () => {
+  const { webhookSecret } = await import('../../server/telegram.js');
+  const env = { TELEGRAM_BOT_TOKEN: 't', LL_KV: memKv() };
+  const today = new Date().toISOString().slice(0, 10);
+  env.LL_KV.m.set(`day:${today}`, JSON.stringify({ ev: { visit: 4, file_loaded: 2, purchase: 1 }, gross: { USD: 29 } }));
+  const calls = [];
+  const secret = await webhookSecret('t');
+  const post = (text, id, s = secret) => handle(new Request('https://ll.example/api/telegram', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': s },
+    body: JSON.stringify({ message: { chat: { id, type: 'private' }, text } }),
+  }), env, { fetch: tg(calls) });
+  assert.equal((await post('/start', 7, 'wrong')).status, 401);
+  assert.equal(calls.length, 0);
+  assert.equal((await post('/start', 7)).status, 200);
+  assert.equal(env.LL_KV.m.get('tg:chat'), '7');
+  assert.match(calls.at(-1).body.text, /Бот подключён/);
+  await post('/start', 8);
+  assert.equal(env.LL_KV.m.get('tg:chat'), '7', 'a second /start never steals the chat');
+  assert.match(calls.at(-1).body.text, /закрытый бот/);
+  await post('/stats', 7);
+  assert.equal(calls.at(-1).body.chat_id, '7');
+  assert.match(calls.at(-1).body.text, /Сегодня/);
+  assert.match(calls.at(-1).body.text, /7 дней/);
+  assert.match(calls.at(-1).body.text, /29 USD/);
+});

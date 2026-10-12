@@ -3,7 +3,7 @@
 
 import { lavaClient, LavaError } from './lava.js';
 import { signLicense } from '../public/assets/js/core/license.js';
-import { send, live, visitText, actionText, ALERT_EVENTS, maybeDigest } from './telegram.js';
+import { send, live, visitText, actionText, ALERT_EVENTS, maybeDigest, webhookSecret, onUpdate } from './telegram.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
@@ -261,6 +261,16 @@ async function event(request, env, deps = {}) {
   return new Response(null, { status: 204 });
 }
 
+// Telegram pushes owner messages here (webhook set by scripts/telegram-webhook.mjs).
+async function telegramHook(request, env, deps) {
+  if (!env.TELEGRAM_BOT_TOKEN || !env.LL_KV) return json({ error: 'Bot not configured' }, 503);
+  const got = request.headers.get('X-Telegram-Bot-Api-Secret-Token') || '';
+  if (!timingSafeEqual(got, await webhookSecret(env.TELEGRAM_BOT_TOKEN))) return json({ error: 'Unauthorized' }, 401);
+  const update = await readJson(request, 64 * 1024);
+  await onUpdate(env, deps, update);
+  return json({ ok: true }); // always 200 so Telegram does not retry a handled update
+}
+
 // Manual license issuing for the owner (invoice sales, lost keys) so the
 // private key never has to leave the hosting secrets.
 async function adminIssue(request, env) {
@@ -461,6 +471,7 @@ const ROUTES = {
   'POST /api/claim': claim,
   'POST /api/webhook/lava': webhook,
   'POST /api/event': event,
+  'POST /api/telegram': telegramHook,
   'GET /api/stats': stats,
   'POST /api/admin/issue': adminIssue,
   'GET /api/admin/summary': adminSummary,

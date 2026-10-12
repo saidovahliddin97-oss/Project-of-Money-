@@ -2,6 +2,7 @@
 // (designed so an automated agent spends as few tokens as possible).
 //   npm run ship            (full: also runs browser e2e if app code changed)
 import { spawnSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,6 +18,10 @@ function run(label, cmd, args, env = {}) {
   }
   return out;
 }
+
+// Google Search Console "HTML file" verification: GOOGLE_SITE_VERIFICATION=google1a2b3c.html
+const gsv = String(process.env.GOOGLE_SITE_VERIFICATION || '').trim().split('/').pop();
+if (/^google[0-9a-f]+\.html$/.test(gsv)) writeFileSync(join(root, 'public', gsv), `google-site-verification: ${gsv}`);
 
 run('guides', 'node', ['scripts/build-guides.mjs'], { SITE_URL: SITE });
 const unit = run('unit tests', 'node', ['--test', 'tests/unit/**/*.test.mjs', 'tools/**/tests/*.test.mjs']);
@@ -36,5 +41,7 @@ const dep = run('deploy', 'node', ['scripts/deploy-cloudflare.mjs']);
 console.log(dep.split('\n').filter((l) => /^✔ Settings|Deployment complete/.test(l)).join('\n'));
 const ix = run('indexnow', 'node', ['scripts/indexnow.mjs']);
 console.log(`✔ ${ix.trim()}`);
+const tg = run('telegram', 'node', ['scripts/telegram-webhook.mjs'], { SITE_URL: SITE });
+console.log(`✔ ${tg.trim()}`);
 const h = await fetch(`${SITE}/api/health`, { cache: 'no-store' });
 console.log(`✔ health ${h.status} ${await h.text()}`);

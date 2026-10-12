@@ -120,3 +120,66 @@ export async function maybeDigest(env, deps, now = new Date()) {
   const read = async (k) => JSON.parse((await env.LL_KV.get(`day:${k}`)) || '{}');
   return send(env, deps, digestText(date, await read(date), await read(prevDay.toISOString().slice(0, 10))));
 }
+
+// ---------------------------------------------------------------------------
+// Webhook: Telegram pushes the owner's messages to /api/telegram. /start pins the
+// chat at once (no 24 h getUpdates window); /stats answers from the same KV counters.
+
+/** Secret Telegram echoes in X-Telegram-Bot-Api-Secret-Token, derived from the bot token. */
+export async function webhookSecret(token) {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`ll-webhook:${token}`));
+  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 48);
+}
+
+const HELP = 'Команды:\n/stats — сегодня и 7 дней\n/help — эта справка\n\nСами приходят: визиты людей, загрузки файлов, «Купить», продажи, итоги дня после 21:00 МСК.';
+
+export function weekText(days) {
+  const sum = {};
+  const money = {};
+  for (const { data } of days) {
+    for (const [k, v] of Object.entries(data.ev || {})) sum[k] = (sum[k] || 0) + v;
+    for (const m of ['gross', 'gross_iif']) for (const [c, v] of Object.entries(data[m] || {})) money[c] = (money[c] || 0) + v;
+  }
+  const ll = (n) => (sum[n] || 0) - (sum[`iif_${n}`] || 0);
+  const visits = ll('visit') + (sum.iif_visit || 0);
+  const buys = (sum.purchase || 0) + (sum.iif_purchase || 0);
+  return [
+    `📈 7 дней (${days[0].date} — ${days[days.length - 1].date})`,
+    `LocalLedger: визиты ${ll('visit')} · файл ${sum.file_loaded || 0} · лимит ${sum.export_locked || 0} · «Купить» ${sum.checkout_start || 0} · оплаты ${sum.purchase || 0}`,
+    `IIF Kit: визиты ${sum.iif_visit || 0} · файл ${sum.iif_file_loaded || 0} · «Купить» ${sum.iif_checkout_start || 0} · оплаты ${sum.iif_purchase || 0}`,
+    `Выручка: ${sumMoney(money)} · конверсия визит→оплата ${visits ? Math.round((buys / visits) * 1000) / 10 : 0}%`,
+  ].join('\n');
+}
+
+async function readDay(env, date) {
+  return JSON.parse((await env.LL_KV.get(`day:${date}`)) || '{}');
+}
+
+/** Handles one Telegram update; returns the reply text (null = stay silent). */
+export async function onUpdate(env, deps, update, now = new Date()) {
+  const msg = update?.message;
+  const chat = msg?.chat;
+  if (!chat || chat.type !== 'private' || typeof msg.text !== 'string') return null;
+  const id = String(chat.id);
+  const cmd = msg.text.trim().split(/[\s@]/)[0].toLowerCase();
+  let owner = env.TELEGRAM_CHAT_ID ? String(env.TELEGRAM_CHAT_ID) : await env.LL_KV.get('tg:chat');
+  if (!owner && cmd === '/start') {
+    await env.LL_KV.put('tg:chat', id);
+    owner = id;
+    return reply(env, deps, id, `Бот подключён. Сюда будут приходить визиты, покупки и итоги дня по LocalLedger и IIF Kit.\n\n${HELP}`);
+  }
+  if (owner !== id) return reply(env, deps, id, 'Это закрытый бот владельца сайта.');
+  if (cmd === '/stats') {
+    const dates = [];
+    for (let i = 6; i >= 0; i--) dates.push(new Date(now.getTime() - i * 86400000).toISOString().slice(0, 10));
+    const days = await Promise.all(dates.map(async (date) => ({ date, data: await readDay(env, date) })));
+    const today = days[6];
+    return reply(env, deps, id, `${digestText(`${today.date} (на ${now.toISOString().slice(11, 16)} UTC)`, today.data, days[5].data).replace('Итоги дня', 'Сегодня')}\n\n${weekText(days)}`);
+  }
+  return reply(env, deps, id, HELP);
+}
+
+async function reply(env, deps, chatIdValue, text) {
+  await call(env, deps, 'sendMessage', { chat_id: chatIdValue, text, disable_web_page_preview: true });
+  return text;
+}

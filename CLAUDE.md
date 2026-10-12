@@ -1,6 +1,6 @@
 # CLAUDE.md — карта репозитория
 
-Начинай сессию с этого файла и `docs/audit.md`. Код целиком не перечитывай.
+Начинай сессию с этого файла, `docs/audit.md` и `docs/STRATEGY.md`. Код целиком не перечитывай.
 
 ## Что здесь
 Студия «Aurora»: локальные (в браузере) инструменты для бухгалтеров и фрилансеров. Оплата — Lava Top.
@@ -18,7 +18,7 @@
 | `public/assets/js/config.js` | цены, лимит free (15 строк), email поддержки |
 | `server/handlers.js` | весь API: checkout, claim, webhook/lava, event, admin/* |
 | `server/lava.js` | клиент Lava Top |
-| `server/telegram.js` | бот владельца (RU): визиты людей, «загрузил файл», «лимит», «Купить», продажи, итоги дня после 21:00 МСК (по первому событию, крона нет), лимит 30 алертов/час. Chat ID берётся сам из первого /start и хранится в KV `tg:chat` |
+| `server/telegram.js` | бот владельца (RU): визиты людей, «загрузил файл», «лимит», «Купить», продажи, итоги дня после 21:00 МСК (по первому событию, крона нет), лимит 30 алертов/час. Webhook `/api/telegram` (ставит `scripts/telegram-webhook.mjs` при ship): первый /start закрепляет чат в KV `tg:chat`, чужим — отказ; `/stats` — сегодня и 7 дней |
 | `functions/api/[[path]].js` | адаптер Cloudflare Pages Functions |
 | `api/router.js`, `vercel.json` | адаптер Vercel (старое превью) |
 | `scripts/` | деплой (`deploy-cloudflare.mjs`, `ship.mjs`), гайды, видео, ключи, статистика |
@@ -47,6 +47,6 @@
 
 ## Переменные окружения (значения — только в секретах)
 Сервер (Cloudflare Pages): `LAVA_API_KEY`, `LAVA_WEBHOOK_SECRET`, `LAVA_OFFER_ID`, `LAVA_PRODUCT_NAME`, `LAVA_OFFER_ID_IIF`, `LAVA_PRODUCT_NAME_IIF`, `LAVA_API_BASE` (опц.), `LICENSE_PRIVATE_JWK`, `ADMIN_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (опц., иначе авто), `SITE_URL`, привязка KV `LL_KV`.
-Скрипты: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_PAGES_PROJECT` (опц.), `CF_API_BASE` (опц.).
+Скрипты: `GOOGLE_SITE_VERIFICATION` (опц., имя файла `google….html` из Search Console — ship кладёт его в `public/`), `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_PAGES_PROJECT` (опц.), `CF_API_BASE` (опц.).
 Планируются: `RESEND_API_KEY`, `CLARITY_PROJECT_ID`.
 Новые переменные среды сессии видны только в новой сессии; после их добавления — `npm run ship`, он синхронизирует секреты в Cloudflare.
