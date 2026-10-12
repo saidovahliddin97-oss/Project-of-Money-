@@ -5,7 +5,6 @@
 |---|---|---|---|
 | LocalLedger | этот репозиторий (`saidovahliddin97-oss/Project-of-Money-`) | Cloudflare Pages `localledger-40f.pages.dev` | работает, оплата Lava включена |
 | IIF Kit (CSV → QuickBooks Desktop .IIF) | этот же репозиторий, `public/iif.html` | `localledger-40f.pages.dev/iif` | работает, отдельный оффер Lava |
-| Snaky.io | **в GitHub не найден** (только Vercel-проект `snaky-io`, команда `saidovahliddin97-oss`) | `snaky-io.vercel.app` | статика + функция `api/scores` |
 | Старое превью | Vercel `localledger-preview` | — | не прод, можно удалить/редиректить |
 
 ## Стек LocalLedger + IIF Kit
@@ -33,16 +32,12 @@
 - Кабинет владельца `/admin` (RU, вход по `ADMIN_TOKEN`): KPI, воронка, деньги, источники, страны, устройства, продажи.
 - Cloudflare Web Analytics разрешён в CSP (`static.cloudflareinsights.com`).
 
-## Snaky.io
-- Статика: `index.html`, `style.css`, `js/{main,game,render,input}.js` (canvas, ~45 КБ), шрифты Inter + Russo One.
-- Рекорды: личные — localStorage; мировой топ — `GET/POST api/scores` (функция Vercel), сейчас отвечает `{"scores":[],"persistent":false}` → **хранилище не подключено**, топ пустой.
-
 ## Деплой
 - `npm run ship`: гайды → тесты → e2e (если менялся код приложения) → `scripts/deploy-cloudflare.mjs` (wrangler pages deploy, синхронизация секретов) → IndexNow → health.
 - Нужен `CLOUDFLARE_API_TOKEN` в окружении сессии; GitHub Actions нет. Токен: Pages Edit + Workers KV Edit (D1/Workers Scripts/Access — не проверены, см. отчёт).
 
 ## Расхождения с мастер-промптом
 - Прод LocalLedger — Cloudflare, не `localledger-preview.vercel.app`.
-- Есть IIF Kit — в «вселенную» входит как пятый продукт.
+- «Вселенная» = LocalLedger + IIF Kit (решение владельца 12.10). Snaky.io исключён.
 - Расширенный трекинг (visitor_id на год, город, ASN, Clarity) противоречит текущей политике → политика переписывается до включения.
 - Холодные письма через Resend требуют своего домена; адрес для CAN-SPAM уже есть (Москва, Митинская 45к2, пав. 7).

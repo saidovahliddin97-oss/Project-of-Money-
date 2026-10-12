@@ -267,10 +267,63 @@ ${cta()}`,
   },
 ];
 
+
+// Bank-specific landing pages (programmatic SEO). Facts here are deliberately general and true for
+// any text-based statement; per-region details drive the differences between pages.
+const REGION = {
+  us: { name: 'US', dates: 'MM/DD (month first), often without the year on each row', apps: ['QuickBooks Online', 'QuickBooks Desktop', 'Xero', 'Excel'], cur: 'USD' },
+  ca: { name: 'Canadian', dates: 'a mix of "Jan 05" and numeric day-first or month-first dates', apps: ['QuickBooks Online', 'Xero', 'Excel'], cur: 'CAD' },
+  uk: { name: 'UK', dates: 'DD/MM or "05 Jan", and the date is often printed only once per day', apps: ['Xero', 'QuickBooks Online', 'FreeAgent (via CSV)', 'Excel'], cur: 'GBP' },
+};
+const banks = [
+  ['chase', 'Chase', 'us', 'both'], ['bank-of-america', 'Bank of America', 'us', 'both'], ['wells-fargo', 'Wells Fargo', 'us', 'both'],
+  ['citi', 'Citi', 'us', 'both'], ['capital-one', 'Capital One', 'us', 'both'], ['us-bank', 'U.S. Bank', 'us', 'both'],
+  ['pnc', 'PNC', 'us', 'bank'], ['truist', 'Truist', 'us', 'bank'], ['td-bank', 'TD Bank', 'us', 'bank'],
+  ['american-express', 'American Express', 'us', 'card'], ['discover', 'Discover', 'us', 'card'],
+  ['rbc', 'RBC Royal Bank', 'ca', 'both'], ['td-canada-trust', 'TD Canada Trust', 'ca', 'both'], ['scotiabank', 'Scotiabank', 'ca', 'both'],
+  ['bmo', 'BMO', 'ca', 'both'], ['cibc', 'CIBC', 'ca', 'both'],
+  ['barclays', 'Barclays', 'uk', 'both'], ['hsbc-uk', 'HSBC UK', 'uk', 'both'], ['lloyds', 'Lloyds Bank', 'uk', 'both'], ['natwest', 'NatWest', 'uk', 'both'],
+].map(([slug, name, region, kind]) => ({ slug, name, region, kind }));
+
+function bankBody(b) {
+  const r = REGION[b.region];
+  const card = b.kind !== 'bank';
+  const acct = b.kind === 'card' ? 'credit card' : b.kind === 'bank' ? 'checking and savings' : 'checking, savings and credit card';
+  const qbd = b.region === 'us'
+    ? `<p>Using <strong>QuickBooks Desktop</strong>? Convert to CSV here, then turn the CSV into an .IIF file with <a href="/iif">IIF Kit</a> — rules like <code>shell =&gt; Fuel</code> map each row to your accounts.</p>`
+    : '';
+  return `
+<p>Need ${esc(b.name)} transactions in a spreadsheet or your accounting software, but only have PDF statements? LocalLedger reads text-based ${esc(b.name)} ${acct} statements <strong>inside your browser</strong> — the file is never uploaded — and rebuilds clean rows: date, description, signed amount and balance.</p>
+<h2>Step 1: Get the PDF from ${esc(b.name)}</h2>
+<p>Sign in to ${esc(b.name)} online banking, open the account and look for <em>Statements</em> (sometimes under <em>Statements &amp; documents</em> or the account menu). Download each month as PDF. Statements downloaded this way contain real text, which is what a converter needs. A scan or a phone photo of a paper statement does not — run OCR on it first.</p>
+<p>Only need the last few weeks? Online banking may offer a direct CSV or Excel download of recent activity — use it. PDF conversion is for older months and for statements someone sent you.</p>
+<h2>Step 2: Convert it</h2>
+<ol>
+  <li>Open the <a href="/app.html">converter</a> and drop one or more ${esc(b.name)} PDFs on it (several months at once is fine).</li>
+  <li>Check the summary: opening balance + transactions should equal the closing balance. A mismatch means a row was missed or misread.</li>
+  <li>Review the table, fix anything odd, remove duplicates if months overlap.</li>
+  <li>Download: ${r.apps.map(esc).join(', ')}, CSV, QIF or OFX.</li>
+</ol>
+<h2>What is different about ${r.name} statements</h2>
+<ul>
+  <li><strong>Dates:</strong> ${r.name} statements usually use ${r.dates}. LocalLedger detects the order from the whole file and fills in the year from the statement period.</li>
+  <li><strong>Amounts:</strong> debits and credits are often in separate columns or marked with signs like CR/DR. You get one signed Amount column (money out negative) plus optional Money In / Money Out.</li>
+${card ? `  <li><strong>Credit cards:</strong> card statements print purchases as positive numbers. For your books they are money out, so LocalLedger detects card statements and flips the signs — payments to the card become positive.</li>\n` : ''}  <li><strong>Currency:</strong> amounts are kept as printed (${r.cur}); no conversion is applied.</li>
+</ul>
+${qbd}
+<h2>Is it safe?</h2>
+<p>Most online converters upload your statement to their server. LocalLedger does the work with JavaScript on your own device, so the statement never leaves it. See <a href="/guides/is-it-safe-to-upload-bank-statements-online.html">is it safe to upload bank statements online?</a></p>
+<h2>If your statement is not read correctly</h2>
+<p>Bank layouts change. If a ${esc(b.name)} statement converts with missing or wrong rows, email <a href="mailto:ahlak2049@gmail.com">ahlak2049@gmail.com</a> with a description of the problem (no need to send the statement) — and you can always correct rows in the table before exporting.</p>
+<p class="muted small">LocalLedger is an independent tool and is not affiliated with or endorsed by ${esc(b.name)}. Bank names are trademarks of their owners and are used only to describe compatibility.</p>
+${cta(`Convert a ${b.name} statement — free preview`)}`;
+}
+
 const header = `  <header class="site-header">
     <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
     <nav>
       <a href="/guides/">Guides</a>
+      <a href="/banks/">Banks</a>
       <a href="/#pricing">Pricing</a>
       <a class="btn btn-small" href="/app.html">Open converter</a>
     </nav>
@@ -278,7 +331,7 @@ const header = `  <header class="site-header">
 const footer = `  <footer class="site-footer">
     <div class="container">
       <span>© 2026 LocalLedger</span>
-      <span><a href="/guides/">Guides</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a> · <a href="mailto:ahlak2049@gmail.com">Support</a></span>
+      <span><a href="/guides/">Guides</a> · <a href="/banks/">Banks</a> · <a href="/iif">IIF Kit for QuickBooks Desktop</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a> · <a href="mailto:ahlak2049@gmail.com">Support</a></span>
     </div>
   </footer>`;
 
@@ -350,7 +403,44 @@ ${cta('Open the converter')}`,
   }),
 );
 
-const urls = ['/', '/app.html', '/iif', '/guides/', ...guides.map((g) => `/guides/${g.slug}.html`), '/privacy.html', '/terms.html'];
+
+const bdir = join(root, 'public', 'banks');
+mkdirSync(bdir, { recursive: true });
+for (const b of banks) {
+  const title = `Convert ${b.name} PDF statements to Excel, CSV or QuickBooks`;
+  const description = `Turn ${b.name} PDF bank statements into Excel, CSV, QuickBooks, Xero, QIF or OFX in your browser. Nothing is uploaded; totals are checked against the statement balance.`;
+  const peers = banks.filter((o) => o.region === b.region && o !== b).slice(0, 5);
+  const faq = [
+    [`Can I convert ${b.name} statements without uploading them?`, 'Yes. The conversion runs in your browser; the PDF is never sent to a server.'],
+    [`Is it free?`, 'You can preview every transaction and export up to 15 rows free. LocalLedger Pro is a one-time $29 payment for unlimited exports.'],
+    [`Does it work with scanned ${b.name} statements?`, 'No. It needs text-based PDFs, like the ones downloaded from online banking. Scans need OCR first.'],
+  ];
+  const body = `    <p class="crumbs"><a href="/">Home</a> › <a href="/banks/">Banks</a></p>
+    <h1>${esc(title)}</h1>
+    <p class="muted">Updated ${UPDATED}</p>
+${bankBody(b)}
+<h2>FAQ</h2>
+${faq.map(([q, a]) => `<h3>${esc(q)}</h3>\n<p>${esc(a)}</p>`).join('\n')}
+<h2>Other ${REGION[b.region].name} banks</h2>
+<ul>
+${peers.map((o) => `  <li><a href="/banks/${o.slug}.html">${esc(o.name)} statement converter</a></li>`).join('\n')}
+</ul>`;
+  writeFileSync(join(bdir, `${b.slug}.html`), page({
+    title: `${title} | LocalLedger`, description, path: `/banks/${b.slug}.html`, body,
+    jsonLd: { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) },
+  }));
+}
+writeFileSync(join(bdir, 'index.html'), page({
+  title: 'Bank statement converters by bank — US, Canada, UK | LocalLedger',
+  description: 'Convert PDF statements from Chase, Bank of America, Wells Fargo, RBC, TD, Barclays, HSBC and more to Excel, CSV, QuickBooks or Xero — in your browser.',
+  path: '/banks/',
+  body: `    <h1>Convert statements by bank</h1>
+    <p class="muted">LocalLedger reads text-based PDF statements from any bank. These pages cover the specifics for the most common ones.</p>
+${['us', 'ca', 'uk'].map((rg) => `    <h2>${REGION[rg].name} banks</h2>\n    <ul class="guide-list">\n${banks.filter((b) => b.region === rg).map((b) => `      <li><a href="/banks/${b.slug}.html">${esc(b.name)}<span>PDF statement → Excel, CSV, ${esc(REGION[rg].apps[0])}</span></a></li>`).join('\n')}\n    </ul>`).join('\n')}
+${cta('Open the converter')}`,
+}));
+
+const urls = ['/', '/app.html', '/iif', '/guides/', ...guides.map((g) => `/guides/${g.slug}.html`), '/banks/', ...banks.map((b) => `/banks/${b.slug}.html`), '/privacy.html', '/terms.html'];
 writeFileSync(
   join(root, 'public', 'sitemap.xml'),
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}${u}</loc><lastmod>${UPDATED}</lastmod></url>`).join('\n')}\n</urlset>\n`,
@@ -359,4 +449,4 @@ writeFileSync(
   join(root, 'public', 'robots.txt'),
   `User-agent: *\nAllow: /\nDisallow: /setup.html\nDisallow: /admin.html\nDisallow: /success.html\nDisallow: /cancel.html\nSitemap: ${SITE}/sitemap.xml\n`,
 );
-console.log(`Wrote ${guides.length} guides, guides index and sitemap.xml for ${SITE}`);
+console.log(`Wrote ${guides.length} guides, ${banks.length} bank pages, guides index and sitemap.xml for ${SITE}`);

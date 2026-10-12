@@ -7,7 +7,7 @@
 - **LocalLedger** — выписки PDF/CSV → CSV/XLSX/QBO/Xero/QIF/OFX. `/`, `/app`.
 - **IIF Kit** — CSV → QuickBooks Desktop .IIF. `/iif`.
 - Прод: Cloudflare Pages `localledger-40f.pages.dev` (проект `localledger`, KV `LL_KV`).
-- Snaky.io — отдельный Vercel-проект `snaky-io`, кода в этом репо пока нет (см. audit.md).
+- Фокус — только эти два продукта (Snaky.io исключён владельцем). Приоритет: то, что приносит продажи.
 
 ## Карта
 | Путь | Что |
