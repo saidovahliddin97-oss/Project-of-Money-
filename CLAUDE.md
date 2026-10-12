@@ -34,6 +34,8 @@
 - `npm run stats` — дневная статистика из KV.
 
 ## Соглашения
+- Дизайн «Aurora Glass»: токены и компоненты в `public/assets/css/style.css` (тёмная тема по умолчанию, светлая по системе или `[data-theme=light]`), интеракции в `public/assets/js/ui.js` (подключён синхронно в `<head>` каждой страницы). Шрифты свои: `public/assets/fonts`. Запрещено: оранжевый, Inter/Space Grotesk, эмодзи-иконки.
+- SEO-страницы банков генерирует `scripts/build-guides.mjs` (`/banks/*`).
 - Без фреймворков и сборки, ES-модули, без новых рантайм-зависимостей без нужды.
 - CSP запрещает inline `style`/`script` → стили через классы или CSSOM.
 - `[hidden]{display:none!important}` уже глобально.
