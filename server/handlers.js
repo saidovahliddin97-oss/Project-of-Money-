@@ -147,6 +147,8 @@ async function claim(request, env, deps) {
   const issuedAt = inv.datetime ? Math.floor(Date.parse(inv.datetime) / 1000) || undefined : undefined;
   const license = await signLicense({ email, ref: id, plan: 'pro', issuedAt }, key);
   await kvPut(env, `license:${id}`, JSON.stringify({ email, issuedAt: issuedAt || null }));
+  // The webhook is optional: a verified claim also counts the sale (once per order).
+  await recordSale(env, id, Number(inv.receipt?.amount) || 0, inv.receipt?.currency, email, inv.product?.name);
   return json({ status: 'completed', email, license });
 }
 
@@ -180,10 +182,7 @@ async function webhook(request, env, deps) {
 
   let message = null;
   if (type === 'payment.success') {
-    await record(env, ['purchase'], { gross: { [evt.currency || 'USD']: Number(evt.amount) || 0 } });
-    await kvPut(env, `sale:${new Date().toISOString()}:${evt.contractId || ''}`, JSON.stringify({
-      amount: evt.amount, currency: evt.currency, product: evt.product?.title || '', email: maskEmail(evt.buyer?.email),
-    }));
+    await recordSale(env, evt.contractId, Number(evt.amount) || 0, evt.currency, evt.buyer?.email, evt.product?.title);
     message = `✅ New sale: ${evt.amount} ${evt.currency} — ${evt.product?.title || 'product'} — ${evt.buyer?.email || ''}`;
   } else if (type === 'payment.failed') {
     await record(env, ['payment_failed']);
@@ -349,6 +348,18 @@ async function record(env, names, dims = {}) {
     await env.LL_KV.put(key, JSON.stringify(d), { expirationTtl: 60 * 60 * 24 * 400 });
   } catch {
     /* analytics are best-effort */
+  }
+}
+
+async function recordSale(env, id, amount, currency, email, product) {
+  if (!env.LL_KV || !id) return;
+  try {
+    if (await env.LL_KV.get(`sold:${id}`)) return;
+    await env.LL_KV.put(`sold:${id}`, '1');
+    await record(env, ['purchase'], { gross: { [currency || 'USD']: amount } });
+    await env.LL_KV.put(`sale:${new Date().toISOString()}:${id}`, JSON.stringify({ amount, currency: currency || 'USD', product: product || '', email: maskEmail(email) }));
+  } catch {
+    /* best-effort */
   }
 }
 

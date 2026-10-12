@@ -99,6 +99,11 @@ test('claim issues a license only for COMPLETED invoices', async () => {
   assert.equal(v.valid, true);
   assert.equal(v.ref, INV);
   assert.equal(v.issuedAt, Date.parse("2026-10-10T10:00:00Z") / 1000);
+  // Claiming again or receiving the webhook does not double-count the sale.
+  await handle(req('POST', '/api/claim', { invoiceId: INV }), e, { fetch });
+  const day = JSON.parse(await e.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
+  assert.equal(day.ev.purchase, 1);
+  assert.deepEqual(day.gross, { USD: 29 });
 });
 
 test('webhook: auth required, idempotent, notifies seller', async () => {
