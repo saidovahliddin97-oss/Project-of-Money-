@@ -18,3 +18,7 @@
 
 Пропущено: Wiseman Bookkeeping (WI) — адрес скрыт защитой Cloudflare, владелец его не публикует открыто.
 13.10: ответов на 6 писем нет; 4 визита из США на главную (Windows, macOS, Linux×2), загрузок файлов нет.
+| 2026-10-13 | Office & Bookkeeping Services (McKinney TX, QB cleanup) — Debra Groman | info@mybookkeeperservice.com | alignable.com/mckinney-tx/office-bookkeeping-services-llc | отправлено 2026-10-13 (с разрешения владельца, без черновика) |
+| 2026-10-13 | Local Ledgers (Bend OR) — Candice | candice@localledgers.com | localledgers.com | отправлено 2026-10-13 |
+
+Правила с 13.10: владелец разрешил отправлять самостоятельно, 5–15 писем в день. UK — только явные Ltd (PECR); M&K Bookkeeping (Medway) отложена: статус юрлица неясен.
