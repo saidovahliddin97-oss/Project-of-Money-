@@ -50,13 +50,26 @@ async function ownerChat() {
   }
 }
 
+// The lava.top offer is found by product title, so the owner only has to create the product.
+async function lavaOffer() {
+  if (process.env.LAVA_OFFER_ID_ZS) return process.env.LAVA_OFFER_ID_ZS;
+  if (!process.env.LAVA_API_KEY) return '';
+  try {
+    const d = await (await fetch('https://gate.lava.top/api/v2/products', { headers: { 'X-Api-Key': process.env.LAVA_API_KEY, Accept: 'application/json' } })).json();
+    const p = (d.items || []).find((x) => /счёт за рубежом|счет за рубежом/i.test(x.title || ''));
+    return p?.offers?.[0]?.id || '';
+  } catch {
+    return '';
+  }
+}
+
 const env = {
   CF_PAGES_PROJECT: PROJECT,
   CF_PUBLIC_DIR: 'dist/zs',
   SITE_URL: '',
   SITE_LABEL: 'Счёт за рубежом',
   TELEGRAM_CHAT_ID: await ownerChat(),
-  LAVA_OFFER_ID: process.env.LAVA_OFFER_ID_ZS || '',
+  LAVA_OFFER_ID: await lavaOffer(),
   LAVA_PRODUCT_NAME: process.env.LAVA_PRODUCT_NAME_ZS || 'Счёт за рубежом — цифры для ОДДС',
   // The main site's offers must not leak into this project.
   LAVA_OFFER_ID_IIF: '', LAVA_OFFER_ID_BUNDLE: '', LAVA_OFFER_ID_PASS: '', LAVA_OFFER_ID_ONE: '',
