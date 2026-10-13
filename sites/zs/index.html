@@ -21,7 +21,6 @@
   ]}
   </script>
   <script type="module" src="/assets/js/zs-app.js"></script>
-  <script src="/assets/js/pv.js" defer></script>
 </head>
 <body data-product="zs">
   <header class="site-header">
@@ -106,15 +105,13 @@
           <div id="threshold" class="threshold"></div>
           <div id="paywall" class="paywall">
             <p><strong>Цифры скрыты.</strong> Распознавание и проверка «нужно ли подавать» — бесплатно. Готовые цифры для всех счетов и валют за год — <strong>990 ₽</strong> разово.</p>
-            <form id="buy-form" class="buy">
-              <input name="email" type="email" required autocomplete="email" placeholder="email для чека и ключа" aria-label="Email">
-              <button type="submit" class="btn">Получить цифры — 990 ₽</button>
-            </form>
+            <p class="buy"><a id="buy-link" class="btn" href="#tool">Получить цифры — 990 ₽</a></p>
             <p id="buy-error" class="error" role="alert"></p>
-            <details class="activate"><summary>У меня уже есть ключ</summary>
-              <form id="activate-form" class="stack"><textarea name="key" rows="3" required placeholder="LL1.…" aria-label="Ключ"></textarea><button type="submit" class="btn btn-ghost">Активировать</button><p id="activate-msg" role="status"></p></form>
+            <details class="activate"><summary>У меня уже есть код доступа</summary>
+              <form id="activate-form" class="buy"><input name="code" required autocomplete="off" placeholder="код из письма или ссылки после оплаты" aria-label="Код доступа"><button type="submit" class="btn btn-ghost">Открыть</button></form>
+              <p id="activate-msg" role="status"></p>
             </details>
-            <p class="fine">Оплата картой РФ, СБП или зарубежной картой через lava.top. Если цифры не совпали с вашей выпиской — вернём деньги в течение 14 дней.</p>
+            <p class="fine">Оплата на странице lava.top картой РФ, по СБП или зарубежной картой. После оплаты вы вернётесь сюда по ссылке, и цифры откроются. Сохраните эту ссылку: по ней цифры откроются и на другом устройстве. Если цифры не совпали с вашей выпиской, вернём деньги в течение 14 дней.</p>
           </div>
           <div id="paid-actions" hidden>
             <button type="button" id="copy-csv" class="btn btn-ghost btn-small">Скачать таблицу (CSV)</button>
@@ -151,7 +148,7 @@
   <footer class="site-footer">
     <div class="container">
       <span>© 2026 Счёт за рубежом · сделано командой LocalLedger</span>
-      <span><a href="/privacy.html">Конфиденциальность</a> · <a href="/terms.html">Условия и возврат</a> · <a href="/success.html">Восстановить ключ</a> · <a href="mailto:ahlak2049@gmail.com">Поддержка</a></span>
+      <span><a href="/privacy.html">Конфиденциальность</a> · <a href="/terms.html">Условия и возврат</a> · <a href="/unlock.html">Код доступа</a> · <a href="mailto:ahlak2049@gmail.com">Поддержка</a></span>
     </div>
   </footer>
 </body>

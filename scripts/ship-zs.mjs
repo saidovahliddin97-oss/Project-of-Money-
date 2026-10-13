@@ -1,82 +1,42 @@
-// Deploys «Счёт за рубежом» as its own Cloudflare Pages project (own KV, own license key)
-// sharing the API code in functions/ and server/.
-//   npm run ship:zs      (needs CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID; LAVA_OFFER_ID_ZS once the offer exists)
+// Publishes «Счёт за рубежом» to GitHub Pages (branch gh-pages of this repo), which opens in Russia
+// without VPN — Cloudflare and Vercel are throttled by Russian ISPs (checked 13.10.2026 via check-host.net).
+//   npm run ship:zs
+// One-time owner setup: GitHub → Settings → Pages → Source «Deploy from a branch» → gh-pages / (root).
 import { spawnSync } from 'node:child_process';
+import { mkdtempSync, cpSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const PROJECT = 'schet-za-rubezhom';
-const API = 'https://api.cloudflare.com/client/v4';
-const { CLOUDFLARE_API_TOKEN: TOKEN, CLOUDFLARE_ACCOUNT_ID: ACCOUNT } = process.env;
-
-function run(label, cmd, args, env = {}) {
-  const r = spawnSync(cmd, args, { cwd: root, encoding: 'utf8', env: { ...process.env, ...env } });
-  const out = `${r.stdout || ''}${r.stderr || ''}`;
+function run(label, cmd, args, opts = {}) {
+  const r = spawnSync(cmd, args, { cwd: root, encoding: 'utf8', ...opts });
   if (r.status !== 0) {
-    console.log(`✖ ${label}\n${out.split('\n').filter((l) => /^(not ok|✖)|Error/.test(l)).slice(0, 20).join('\n')}`);
+    console.log(`✖ ${label}\n${`${r.stdout || ''}${r.stderr || ''}`.split('\n').filter((l) => /not ok|✖|error|fatal/i.test(l)).slice(0, 20).join('\n')}`);
     process.exit(1);
   }
-  return out;
-}
-
-// Same guard as ship.mjs: never roll back another session's newer work.
-if (!process.env.SHIP_FORCE) {
-  spawnSync('git', ['fetch', '-q', 'origin'], { cwd: root });
-  const heads = spawnSync('git', ['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin'], { cwd: root, encoding: 'utf8' }).stdout.split('\n').filter((b) => b && !b.endsWith('/HEAD'));
-  const ahead = heads.filter((b) => spawnSync('git', ['merge-base', '--is-ancestor', b, 'HEAD'], { cwd: root }).status === 1);
-  if (ahead.length) {
-    console.log(`✖ not deploying: ${ahead.join(', ')} has commits missing here. Merge first, or SHIP_FORCE=1.`);
-    process.exit(1);
-  }
+  return `${r.stdout || ''}${r.stderr || ''}`;
 }
 
 const unit = run('unit tests', 'node', ['--test', 'tests/unit/**/*.test.mjs']);
 console.log(`✔ unit tests ${(unit.match(/# pass (\d+)/) || [])[1]} passed`);
-run('build', 'node', ['scripts/build-zs.mjs']);
+console.log(run('build', 'node', ['scripts/build-zs.mjs']).trim().split('\n')[0]);
 
-// Telegram: reuse the owner's chat pinned in the main site's KV, so alerts work without setup.
-async function ownerChat() {
-  if (process.env.TELEGRAM_CHAT_ID) return process.env.TELEGRAM_CHAT_ID;
-  try {
-    const h = { Authorization: `Bearer ${TOKEN}` };
-    const ns = await (await fetch(`${API}/accounts/${ACCOUNT}/storage/kv/namespaces?per_page=100`, { headers: h })).json();
-    const main = (ns.result || []).find((n) => n.title === 'localledger-LL_KV');
-    if (!main) return '';
-    const r = await fetch(`${API}/accounts/${ACCOUNT}/storage/kv/namespaces/${main.id}/values/tg%3Achat`, { headers: h });
-    return r.ok ? (await r.text()).trim() : '';
-  } catch {
-    return '';
+// Push dist/zs as the single commit of gh-pages (the branch holds only the built site).
+const tmp = mkdtempSync(join(tmpdir(), 'zs-pages-'));
+cpSync(join(root, 'dist', 'zs'), tmp, { recursive: true });
+const remote = run('remote', 'git', ['remote', 'get-url', 'origin']).trim();
+const git = (...a) => run(`git ${a[0]}`, 'git', a, { cwd: tmp });
+git('init', '-q', '-b', 'gh-pages');
+git('add', '-A');
+git('-c', 'user.name=Claude', '-c', 'user.email=noreply@anthropic.com', 'commit', '-q', '-m', 'Publish «Счёт за рубежом»');
+for (let i = 0, wait = 2000; ; i++, wait *= 2) {
+  const r = spawnSync('git', ['push', '-q', '--force', remote, 'gh-pages'], { cwd: tmp, encoding: 'utf8' });
+  if (r.status === 0) break;
+  if (i === 3) {
+    console.log(`✖ push gh-pages\n${r.stderr}`);
+    process.exit(1);
   }
+  await new Promise((res) => setTimeout(res, wait));
 }
-
-// The lava.top offer is found by product title, so the owner only has to create the product.
-async function lavaOffer() {
-  if (process.env.LAVA_OFFER_ID_ZS) return process.env.LAVA_OFFER_ID_ZS;
-  if (!process.env.LAVA_API_KEY) return '';
-  try {
-    const d = await (await fetch('https://gate.lava.top/api/v2/products', { headers: { 'X-Api-Key': process.env.LAVA_API_KEY, Accept: 'application/json' } })).json();
-    const p = (d.items || []).find((x) => /счёт за рубежом|счет за рубежом/i.test(x.title || ''));
-    return p?.offers?.[0]?.id || '';
-  } catch {
-    return '';
-  }
-}
-
-const env = {
-  CF_PAGES_PROJECT: PROJECT,
-  CF_PUBLIC_DIR: 'dist/zs',
-  SITE_URL: '',
-  SITE_LABEL: 'Счёт за рубежом',
-  TELEGRAM_CHAT_ID: await ownerChat(),
-  LAVA_OFFER_ID: await lavaOffer(),
-  LAVA_PRODUCT_NAME: process.env.LAVA_PRODUCT_NAME_ZS || 'Счёт за рубежом — цифры для ОДДС',
-  // The main site's offers must not leak into this project.
-  LAVA_OFFER_ID_IIF: '', LAVA_OFFER_ID_BUNDLE: '', LAVA_OFFER_ID_PASS: '', LAVA_OFFER_ID_ONE: '',
-};
-const dep = run('deploy', 'node', ['scripts/deploy-cloudflare.mjs'], env);
-const url = (dep.match(/Site: (\S+)/) || dep.match(/→ (https:\/\/\S+)/) || [])[1] || `https://${PROJECT}.pages.dev`;
-console.log(`✔ deployed → ${url}`);
-const h = await fetch(`${url}/api/health`).then((r) => r.text()).catch((e) => e.message);
-console.log(`✔ health ${h}`);
-console.log(`✔ ${run('indexnow', 'node', ['scripts/indexnow.mjs', 'dist/zs/sitemap.xml']).trim()}`);
+console.log('✔ pushed gh-pages → https://saidovahliddin97-oss.github.io/Project-of-Money-/ (GitHub Pages updates in ~1 min)');

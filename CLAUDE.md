@@ -8,8 +8,8 @@
 - **IIF Kit** — CSV → QuickBooks Desktop .IIF. `/iif`.
 - Прод: Cloudflare Pages `localledger-40f.pages.dev` (проект `localledger`, KV `LL_KV`).
 - Фокус — продукты, которые приносят продажи (Snaky.io исключён владельцем).
-- **Счёт за рубежом** (RU) — цифры листа 3 ОДДС из выписок. Исходники `sites/zs/` (расчёты `zs-calc.js`, тесты `tests/unit/zs.test.mjs`), сборка `npm run build:zs` → `dist/zs` (копирует общий движок из `public/`), деплой `npm run ship:zs` → отдельный Pages-проект `schet-za-rubezhom` (свой KV и ключ лицензий, тот же бот с `SITE_LABEL`). Оффер lava ищется по названию товара «Счёт за рубежом».
-- Код английского сайта, цены и рассылку бухгалтерам ведёт сессия на ветке `claude/epic-wozniak-o55eki`.
+- **Счёт за рубежом** (RU) — цифры листа 3 ОДДС из выписок. Исходники `sites/zs/` (расчёты `zs-calc.js`, тесты `tests/unit/zs.test.mjs`). **Полностью статический** и хостится на GitHub Pages (ветка `gh-pages`, https://saidovahliddin97-oss.github.io/Project-of-Money-/): Cloudflare и Vercel из РФ без VPN не открываются (тротлинг провайдеров с 06.2025, проверено check-host.net 13.10). Сборка `npm run build:zs` (относительные пути, ссылка на товар lava по названию «Счёт за рубежом», SHA-256 кода доступа), публикация `npm run ship:zs`. Оплата — на странице товара lava.top; «После оплаты» ведёт на `/unlock.html#<код>`; код лежит только в `.secrets/zs-unlock-code` (не в git).
+- Всё ведёт одна основная сессия (решение владельца 13.10): чаты объединены, деления зон ответственности нет.
 
 ## Карта
 | Путь | Что |

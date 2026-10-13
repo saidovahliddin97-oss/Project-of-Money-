@@ -5,8 +5,10 @@ import { extractLines } from './core/pdf-extract.js';
 import { parseStatement } from './core/statement-parser.js';
 import { importCsv } from './core/csv-import.js';
 import { OKV, ZONES, thousands, yearTotals, reconciles, thresholdVerdict, round2 } from './zs-calc.js';
-import { getStatus, activate, startCheckout } from './pro.js';
-import { track } from './track.js';
+import { isUnlocked, unlockWithCode, PAY_URL } from './zs-unlock.js';
+
+// Статический сайт (GitHub Pages, доступен из РФ без VPN): счётчиков на сервер нет.
+const track = () => {};
 
 pdfjs.GlobalWorkerOptions.workerSrc = '/assets/vendor/pdfjs/pdf.worker.min.mjs';
 
@@ -178,26 +180,21 @@ async function init() {
     a.click();
     track('export_free');
   });
-  $('#buy-form').addEventListener('submit', async (e) => {
+  const buy = $('#buy-link');
+  if (PAY_URL) buy.href = PAY_URL;
+  buy.addEventListener('click', (e) => {
+    if (PAY_URL) return;
     e.preventDefault();
-    $('#buy-error').textContent = '';
-    const btn = e.target.querySelector('button');
-    btn.disabled = true;
-    try {
-      await startCheckout({ email: e.target.email.value, currency: 'RUB', method: 'card' });
-    } catch (err) {
-      $('#buy-error').textContent = /not available/i.test(err.message) ? 'Оплата подключается. Напишите на ahlak2049@gmail.com — пришлём цифры вручную.' : err.message;
-      btn.disabled = false;
-    }
+    $('#buy-error').textContent = 'Оплата подключается. Напишите на ahlak2049@gmail.com — пришлём цифры вручную.';
   });
   $('#activate-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const r = await activate(e.target.key.value.trim(), 'pro').catch(() => ({ valid: false }));
-    $('#activate-msg').textContent = r?.valid ? 'Готово, цифры открыты.' : 'Ключ не подошёл.';
-    state.pro = (await getStatus('pro')).pro;
+    const ok = await unlockWithCode(e.target.code.value);
+    $('#activate-msg').textContent = ok ? 'Готово, цифры открыты.' : 'Код не подошёл.';
+    state.pro = await isUnlocked();
     render();
   });
-  state.pro = (await getStatus('pro')).pro;
+  state.pro = await isUnlocked();
   state.accounts.push(newAccount());
   updateCheck();
 }
