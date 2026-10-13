@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const key = readFileSync(join(root, '.indexnow-key'), 'utf8').trim();
-const urls = [...readFileSync(join(root, 'public/sitemap.xml'), 'utf8').matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+// Optional argument: another sitemap (e.g. dist/zs/sitemap.xml for «Счёт за рубежом»).
+const urls = [...readFileSync(join(root, process.argv[2] || 'public/sitemap.xml'), 'utf8').matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
 const host = new URL(urls[0]).host;
 const res = await fetch('https://api.indexnow.org/indexnow', {
   method: 'POST',

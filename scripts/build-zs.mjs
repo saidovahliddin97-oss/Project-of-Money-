@@ -16,6 +16,9 @@ const shared = [
 ];
 for (const p of shared) cpSync(join(root, 'public', p), join(out, p), { recursive: true });
 cpSync(join(root, 'sites', 'zs'), out, { recursive: true });
+// IndexNow key (Bing/Yandex) — same key file as the main site.
+const key = readFileSync(join(root, '.indexnow-key'), 'utf8').trim();
+writeFileSync(join(out, `${key}.txt`), key);
 // Same security headers as the main site.
 writeFileSync(join(out, '_headers'), readFileSync(join(root, 'public', '_headers'), 'utf8'));
 console.log(`Built ${out}`);

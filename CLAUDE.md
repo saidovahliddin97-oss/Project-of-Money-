@@ -7,7 +7,9 @@
 - **LocalLedger** — выписки PDF/CSV → CSV/XLSX/QBO/Xero/QIF/OFX. `/`, `/app`.
 - **IIF Kit** — CSV → QuickBooks Desktop .IIF. `/iif`.
 - Прод: Cloudflare Pages `localledger-40f.pages.dev` (проект `localledger`, KV `LL_KV`).
-- Фокус — только эти два продукта (Snaky.io исключён владельцем). Приоритет: то, что приносит продажи.
+- Фокус — продукты, которые приносят продажи (Snaky.io исключён владельцем).
+- **Счёт за рубежом** (RU) — цифры листа 3 ОДДС из выписок. Исходники `sites/zs/` (расчёты `zs-calc.js`, тесты `tests/unit/zs.test.mjs`), сборка `npm run build:zs` → `dist/zs` (копирует общий движок из `public/`), деплой `npm run ship:zs` → отдельный Pages-проект `schet-za-rubezhom` (свой KV и ключ лицензий, тот же бот с `SITE_LABEL`). Оффер lava ищется по названию товара «Счёт за рубежом».
+- Код английского сайта, цены и рассылку бухгалтерам ведёт сессия на ветке `claude/epic-wozniak-o55eki`.
 
 ## Карта
 | Путь | Что |

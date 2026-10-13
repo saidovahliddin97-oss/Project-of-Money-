@@ -79,3 +79,4 @@ const url = (dep.match(/Site: (\S+)/) || dep.match(/→ (https:\/\/\S+)/) || [])
 console.log(`✔ deployed → ${url}`);
 const h = await fetch(`${url}/api/health`).then((r) => r.text()).catch((e) => e.message);
 console.log(`✔ health ${h}`);
+console.log(`✔ ${run('indexnow', 'node', ['scripts/indexnow.mjs', 'dist/zs/sitemap.xml']).trim()}`);
