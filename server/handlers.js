@@ -106,13 +106,13 @@ async function checkout(request, env, deps) {
   }
   const email = String(body.email || '').trim().toLowerCase();
   if (!EMAIL_RE.test(email)) return json({ error: 'Please enter a valid email address.' }, 400);
-  const currency = ['USD', 'EUR'].includes(body.currency) ? body.currency : 'USD';
+  const currency = ['USD', 'EUR', 'RUB'].includes(body.currency) ? body.currency : 'USD';
   const base = siteUrl(env, request);
   const params = {
     email,
     offerId: product.offerId,
     currency,
-    buyerLanguage: 'EN',
+    buyerLanguage: currency === 'RUB' ? 'RU' : 'EN',
     successful_return_url: `${base}/success.html`,
     failure_return_url: `${base}/cancel.html?status=failed`,
     cancel_return_url: `${base}/cancel.html`,

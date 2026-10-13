@@ -47,6 +47,8 @@ export async function chatId(env, deps = {}) {
 }
 
 export async function send(env, deps, text) {
+  // A second site on the same bot (e.g. «Счёт за рубежом») labels its alerts with SITE_LABEL.
+  if (env.SITE_LABEL) text = String(text).replaceAll('LocalLedger', env.SITE_LABEL);
   if (!env.TELEGRAM_BOT_TOKEN) return false;
   const chat = await chatId(env, deps);
   if (!chat) return false;

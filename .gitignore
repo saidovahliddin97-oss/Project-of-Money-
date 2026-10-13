@@ -10,3 +10,4 @@ tests/fixtures/pdf/
 tests/e2e/output/
 *.log
 .DS_Store
+dist/

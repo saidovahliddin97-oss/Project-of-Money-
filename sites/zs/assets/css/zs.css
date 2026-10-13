@@ -1,0 +1,33 @@
+/* «Счёт за рубежом»: дополнения к Aurora Glass */
+.q { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.q legend { font-weight: 700; margin-bottom: 6px; }
+.opt { flex-direction: row; align-items: center; gap: 10px; color: var(--fg); font-size: .95rem; }
+.opt input { min-height: 0; width: 18px; height: 18px; accent-color: var(--aurora-2); }
+.verdict { margin: 0; padding: 12px 14px; border-radius: var(--radius-s); background: var(--glass); border: 1px solid var(--line); }
+.verdict:empty { display: none; }
+.verdict.good { border-color: color-mix(in srgb, var(--good) 55%, transparent); }
+.verdict.warn { border-color: color-mix(in srgb, var(--warn-c) 55%, transparent); }
+.tool-head { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; margin-bottom: 16px; }
+.accounts { display: grid; gap: 14px; }
+.account { display: grid; gap: 12px; }
+.account-head { display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 10px; align-items: end; }
+.dz-small { padding: 22px 16px; }
+.dz-small .dz-title { font-size: 1rem; }
+.result { margin-top: 20px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.zs-table { min-width: 620px; }
+.zs-table td.num { text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.zs-table td.masked { color: var(--fg-muted); letter-spacing: .08em; filter: blur(.5px); }
+.threshold { display: grid; gap: 8px; margin: 16px 0; }
+.threshold h4 { margin: 0; }
+.rate { margin-top: 8px; max-width: 320px; }
+.paywall { border-top: 1px solid var(--line); padding-top: 14px; }
+.buy { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.buy input { flex: 1 1 240px; }
+@media (max-width: 720px) {
+  .account-head { grid-template-columns: 1fr 1fr; }
+  .account-head label:first-child { grid-column: 1 / -1; }
+}
+.hero h1 { font-size: clamp(1.55rem, 3vw, 2.35rem); }
+table.zs-table td, table.zs-table th { width: auto !important; color: inherit; font-size: .9rem; padding: 10px 8px; }
+table.zs-table th:nth-child(n+3) { text-align: right; }

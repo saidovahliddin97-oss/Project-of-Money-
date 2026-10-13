@@ -26,7 +26,7 @@ const COMPAT_DATE = '2026-09-01';
 const WRANGLER = 'wrangler@4.139.0';
 const API = process.env.CF_API_BASE || 'https://api.cloudflare.com/client/v4'; // overridable for tests
 const SECRET_KEYS = ['LAVA_API_KEY', 'LAVA_WEBHOOK_SECRET', 'TELEGRAM_BOT_TOKEN', 'ADMIN_TOKEN'];
-const PLAIN_KEYS = ['LAVA_OFFER_ID', 'LAVA_PRODUCT_NAME', 'LAVA_OFFER_ID_IIF', 'LAVA_PRODUCT_NAME_IIF', 'LAVA_OFFER_ID_BUNDLE', 'LAVA_PRODUCT_NAME_BUNDLE', 'LAVA_OFFER_ID_PASS', 'LAVA_PRODUCT_NAME_PASS', 'LAVA_OFFER_ID_ONE', 'LAVA_PRODUCT_NAME_ONE', 'TELEGRAM_CHAT_ID'];
+const PLAIN_KEYS = ['LAVA_OFFER_ID', 'LAVA_PRODUCT_NAME', 'LAVA_OFFER_ID_IIF', 'LAVA_PRODUCT_NAME_IIF', 'LAVA_OFFER_ID_BUNDLE', 'LAVA_PRODUCT_NAME_BUNDLE', 'LAVA_OFFER_ID_PASS', 'LAVA_PRODUCT_NAME_PASS', 'LAVA_OFFER_ID_ONE', 'LAVA_PRODUCT_NAME_ONE', 'TELEGRAM_CHAT_ID', 'SITE_LABEL'];
 
 if (!TOKEN || !ACCOUNT) {
   console.error('Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (see docs/DEPLOY.md).');
@@ -107,7 +107,7 @@ if (process.env.CF_SKIP_UPLOAD) {
   console.log('(upload skipped)');
   process.exit(0);
 }
-const run = spawnSync('npx', ['-y', WRANGLER, 'pages', 'deploy', 'public', '--project-name', PROJECT, '--branch', BRANCH, '--commit-dirty=true'], {
+const run = spawnSync('npx', ['-y', WRANGLER, 'pages', 'deploy', process.env.CF_PUBLIC_DIR || 'public', '--project-name', PROJECT, '--branch', BRANCH, '--commit-dirty=true'], {
   cwd: root,
   stdio: 'inherit',
   env: { ...process.env, CLOUDFLARE_API_TOKEN: TOKEN, CLOUDFLARE_ACCOUNT_ID: ACCOUNT },

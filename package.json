@@ -24,7 +24,9 @@
     "stats": "node scripts/stats.mjs",
     "ship": "node scripts/ship.mjs",
     "traffic": "node tools/traffic-engine/run.mjs --live",
-    "traffic:dry": "node tools/traffic-engine/run.mjs"
+    "traffic:dry": "node tools/traffic-engine/run.mjs",
+    "ship:zs": "node scripts/ship-zs.mjs",
+    "build:zs": "node scripts/build-zs.mjs"
   },
   "dependencies": {
     "pdfjs-dist": "6.3.289"

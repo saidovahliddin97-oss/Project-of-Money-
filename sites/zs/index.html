@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Отчёт о зарубежном счёте (ОДДС): цифры из выписки за 2 минуты</title>
+  <meta name="description" content="Посчитайте остаток на начало и конец года, зачисления и списания для отчёта о движении средств по зарубежному счёту прямо из PDF или CSV выписки. Файлы не покидают ваш компьютер.">
+  <link rel="canonical" href="https://schet-za-rubezhom.pages.dev/">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Цифры для отчёта о зарубежном счёте из выписки">
+  <meta property="og:description" content="Остатки, зачисления и списания по каждой валюте в тысячах единиц — как в листе 3 отчёта. Выписка обрабатывается на вашем устройстве.">
+  <link rel="preload" href="/assets/fonts/unbounded-cyr.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <link rel="stylesheet" href="/assets/css/zs.css">
+  <script src="/assets/js/ui.js"></script>
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+    {"@type":"Question","name":"Кто должен подавать отчёт о движении средств по зарубежному счёту?","acceptedAnswer":{"@type":"Answer","text":"Физлица — валютные резиденты РФ со счетами в зарубежных банках и иных финансовых организациях, до 1 июня следующего года. Есть освобождения: более 183 дней за границей за год, а также счета в странах ЕАЭС и странах автообмена при оборотах или остатке не более 600 тыс. ₽."}},
+    {"@type":"Question","name":"Выписка загружается на сервер?","acceptedAnswer":{"@type":"Answer","text":"Нет. Выписка читается в вашем браузере, на сервер не отправляются ни файл, ни суммы, ни описания операций."}}
+  ]}
+  </script>
+  <script type="module" src="/assets/js/zs-app.js"></script>
+  <script src="/assets/js/pv.js" defer></script>
+</head>
+<body data-product="zs">
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/favicon.svg" alt="" width="26" height="26"> Счёт за рубежом</a>
+    <nav>
+      <a href="#how">Как это работает</a>
+      <a href="#faq">Вопросы</a>
+      <a class="btn btn-small" href="#tool">Посчитать</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="container hero">
+      <div>
+        <p class="eyebrow">Отчёт ОДДС для ФНС</p>
+        <h1>Цифры для отчёта о зарубежном счёте — <em>из выписки, не выходя из браузера</em></h1>
+        <p class="lead">Загрузите выписки зарубежного банка или брокера за год. Мы посчитаем остаток на начало и конец года, зачисления и списания по каждой валюте в тысячах единиц — как их просит лист 3 отчёта в личном кабинете ФНС.</p>
+        <div class="hero-cta">
+          <a class="btn btn-large" href="#tool">Проверить свои выписки</a>
+          <a href="#check" class="muted">или узнать, нужно ли подавать</a>
+        </div>
+        <p class="hero-proof">Без регистрации · выписка не покидает компьютер · проверка бесплатно</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="pdfmock">KASPI BANK · 01.01.2025 – 31.12.2025
+Входящий остаток          1 250 000,00 KZT
+Пополнения               +8 430 500,00
+Покупки и переводы       −7 905 120,40
+Исходящий остаток         1 775 379,60 KZT</div>
+        <p class="arrow">↓ лист 3 · тыс. единиц ↓</p>
+        <table>
+          <tr><td>398</td><td>Остаток на начало</td><td>1 250,000</td></tr>
+          <tr><td>398</td><td>Зачислено</td><td>8 430,500</td></tr>
+          <tr><td>398</td><td>Списано</td><td>7 905,120</td></tr>
+        </table>
+        <p class="arrow">Остаток на конец сходится · 1 775,380</p>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="check">
+      <div class="container narrow">
+        <h2>Нужно ли вам подавать отчёт</h2>
+        <p class="muted">Три вопроса. Порог 600 тыс. ₽ проверим ниже по вашим выпискам.</p>
+        <form id="check-form" class="card stack">
+          <fieldset class="q">
+            <legend>Вы были за пределами России больше 183 дней в отчётном году?</legend>
+            <label class="opt"><input type="radio" name="abroad" value="yes"> Да</label>
+            <label class="opt"><input type="radio" name="abroad" value="no" checked> Нет</label>
+          </fieldset>
+          <fieldset class="q">
+            <legend>Где находится банк или брокер?</legend>
+            <label class="opt"><input type="radio" name="zone" value="eaeu"> Страна ЕАЭС (Казахстан, Киргизия, Армения, Беларусь)</label>
+            <label class="opt"><input type="radio" name="zone" value="crs"> Страна, которая обменивается с Россией финансовой информацией (перечень публикует ФНС; после 2022 года часть стран обмен приостановила — проверьте актуальный список)</label>
+            <label class="opt"><input type="radio" name="zone" value="other" checked> Другая страна или не знаю</label>
+          </fieldset>
+          <p id="check-verdict" class="verdict" role="status"></p>
+        </form>
+      </div>
+    </section>
+
+    <section class="section" id="tool">
+      <div class="container">
+        <h2>Ваши счета</h2>
+        <div class="tool-head">
+          <label>Отчётный год
+            <select id="year"></select>
+          </label>
+          <button type="button" id="add-account" class="btn btn-ghost">+ Добавить счёт</button>
+          <button type="button" id="btn-sample" class="link">Попробовать на примере</button>
+        </div>
+        <div id="accounts" class="accounts"></div>
+        <p class="privacy-note">Выписки обрабатываются <strong>на этом устройстве</strong>. На сервер не уходят ни файлы, ни суммы, ни описания операций.</p>
+
+        <div id="result" class="result card" hidden>
+          <div class="card-head"><h3>Лист 3 — денежные средства, тыс. единиц валюты</h3><span id="pro-badge" class="badge" hidden>ОПЛАЧЕНО</span></div>
+          <div class="table-wrap">
+            <table class="txn zs-table">
+              <thead><tr><th>Счёт</th><th>Код валюты</th><th>Остаток на начало</th><th>Зачислено</th><th>Списано</th><th>Остаток на конец</th></tr></thead>
+              <tbody id="result-body"></tbody>
+            </table>
+          </div>
+          <div id="threshold" class="threshold"></div>
+          <div id="paywall" class="paywall">
+            <p><strong>Цифры скрыты.</strong> Распознавание и проверка «нужно ли подавать» — бесплатно. Готовые цифры для всех счетов и валют за год — <strong>990 ₽</strong> разово.</p>
+            <form id="buy-form" class="buy">
+              <input name="email" type="email" required autocomplete="email" placeholder="email для чека и ключа" aria-label="Email">
+              <button type="submit" class="btn">Получить цифры — 990 ₽</button>
+            </form>
+            <p id="buy-error" class="error" role="alert"></p>
+            <details class="activate"><summary>У меня уже есть ключ</summary>
+              <form id="activate-form" class="stack"><textarea name="key" rows="3" required placeholder="LL1.…" aria-label="Ключ"></textarea><button type="submit" class="btn btn-ghost">Активировать</button><p id="activate-msg" role="status"></p></form>
+            </details>
+            <p class="fine">Оплата картой РФ, СБП или зарубежной картой через lava.top. Если цифры не совпали с вашей выпиской — вернём деньги в течение 14 дней.</p>
+          </div>
+          <div id="paid-actions" hidden>
+            <button type="button" id="copy-csv" class="btn btn-ghost btn-small">Скачать таблицу (CSV)</button>
+            <p class="hint">Отчёт подаётся в личном кабинете налогоплательщика на сайте ФНС (раздел о счетах за рубежом) с неквалифицированной электронной подписью. Значения вносите по каждой валюте счёта; если поле принимает меньше знаков после запятой, округлите по правилам арифметики.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt" id="how">
+      <div class="container">
+        <h2>Как это работает</h2>
+        <ol class="steps">
+          <li><h3>Добавьте счёт</h3><p class="muted">Банк, страна и валюта. Для мультивалютного счёта — по строке на каждую валюту, как в отчёте.</p></li>
+          <li><h3>Перетащите выписки</h3><p class="muted">PDF или CSV из интернет-банка за год. Мы найдём остатки и посчитаем зачисления и списания. Любое число можно поправить вручную.</p></li>
+          <li><h3>Перенесите в ЛК ФНС</h3><p class="muted">Таблица уже в тысячах единиц валюты, с цифровыми кодами валют по ОКВ.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="section faq" id="faq">
+      <div class="container narrow">
+        <h2>Вопросы</h2>
+        <details><summary>Кто обязан подавать отчёт?</summary><p>Физлица — валютные резиденты РФ со счетами (вкладами) в банках и иных финансовых организациях за рубежом, в том числе у брокеров. Срок — до 1 июня года, следующего за отчётным. Основание — ст. 12 Федерального закона № 173-ФЗ и постановление Правительства № 1365.</p></details>
+        <details><summary>Когда можно не подавать?</summary><p>Если вы провели за границей больше 183 дней в году. Или если счёт в стране ЕАЭС либо в стране автообмена, и сумма зачислений или списаний за год не больше 600 тыс. ₽ в эквиваленте (либо остаток на конец года не больше этой суммы). Формулировку закона толкуют по-разному, поэтому мы показываем вывод «можно не подавать» только когда и зачисления, и списания не превышают порог. При сомнениях безопаснее подать отчёт.</p></details>
+        <details><summary>Какой штраф за неподачу?</summary><p>По ст. 15.25 КоАП: от 2 до 3 тыс. ₽ за нарушение порядка, 20 тыс. ₽ при повторном нарушении, от 300 до 3 000 ₽ за просрочку.</p></details>
+        <details><summary>Выписка куда-то отправляется?</summary><p>Нет. Страница читает файл прямо в браузере. На наш сервер уходят только обезличенные счётчики вида «файл распознан» — без файла, сумм, описаний и имён.</p></details>
+        <details><summary>Мой банк выдаёт выписку на казахском, армянском или грузинском</summary><p>Лучше всего читаются выписки на английском и в CSV. Если остатки не нашлись, введите их вручную — зачисления и списания мы всё равно посчитаем по строкам. Пришлите описание проблемы (не саму выписку) на ahlak2049@gmail.com — добавим ваш банк.</p></details>
+        <details><summary>Это налоговая консультация?</summary><p>Нет. Сервис считает суммы по вашим выпискам и проверяет условия освобождения по открытым источникам. Ответственность за отчёт остаётся за вами; сложные случаи обсудите с налоговым консультантом.</p></details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Счёт за рубежом · сделано командой LocalLedger</span>
+      <span><a href="/privacy.html">Конфиденциальность</a> · <a href="/terms.html">Условия и возврат</a> · <a href="/success.html">Восстановить ключ</a> · <a href="mailto:ahlak2049@gmail.com">Поддержка</a></span>
+    </div>
+  </footer>
+</body>
+</html>

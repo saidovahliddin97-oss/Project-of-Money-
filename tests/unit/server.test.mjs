@@ -312,3 +312,14 @@ test('single export ($1): own offer, "one" key, separate counter', async () => {
   const day = JSON.parse(await e2.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
   assert.equal(day.ev.one_purchase, 1);
 });
+
+test('checkout accepts RUB and asks lava for a Russian payment page', async () => {
+  const { env: e } = await env();
+  const calls = [];
+  const fetch = fakeFetch([['/api/v3/invoice', async () => ({ status: 201, body: { id: INV, status: 'NEW', paymentUrl: 'https://pay.example/r' } })]], calls);
+  const res = await handle(req('POST', '/api/checkout', { email: 'a@b.ru', currency: 'RUB' }), e, { fetch });
+  assert.equal(res.status, 200);
+  const sent = JSON.parse(calls[0].init.body);
+  assert.equal(sent.currency, 'RUB');
+  assert.equal(sent.buyerLanguage, 'RU');
+});
