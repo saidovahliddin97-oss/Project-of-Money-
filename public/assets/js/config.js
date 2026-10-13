@@ -8,6 +8,10 @@ export const CONFIG = {
   // Both tools in one purchase (lava.top product LAVA_PRODUCT_NAME_BUNDLE).
   PRICE_BUNDLE_USD: 49,
   PRICE_BUNDLE_EUR: 43.92,
+  // 24-hour pass for one-off jobs (lava.top product LAVA_PRODUCT_NAME_PASS).
+  PRICE_PASS_USD: 5,
+  PRICE_PASS_EUR: 4.48,
+  PASS_HOURS: 24,
   // Rows a free user can export per download. Parsing and preview are unlimited.
   FREE_EXPORT_ROWS: 15,
   // Public support address shown on the site. Leave empty to hide it.

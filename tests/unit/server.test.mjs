@@ -46,7 +46,7 @@ test('health reports configuration without leaking secrets', async () => {
   const { env: e } = await env();
   const res = await handle(req('GET', '/api/health'), e);
   const body = await res.json();
-  assert.deepEqual(body, { ok: true, checkout: true, checkoutIif: false, checkoutBundle: false, licensing: true, webhookAuth: true, notifications: true, events: true });
+  assert.deepEqual(body, { ok: true, checkout: true, checkoutIif: false, checkoutBundle: false, checkoutPass: false, licensing: true, webhookAuth: true, notifications: true, events: true });
   assert.ok(!JSON.stringify(body).includes('test-key'));
 });
 
@@ -275,4 +275,23 @@ test('bundle: checkout uses the bundle offer, claim issues a "bundle" key, healt
   const day = JSON.parse(await e2.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
   assert.equal(day.ev.bundle_purchase, 1);
   assert.deepEqual(day.gross, { USD: 49 });
+});
+
+test('24-hour pass: own offer, "pass" key dated at payment time, separate counter', async () => {
+  const { env: e, publicJwk } = await env();
+  const e2 = { ...e, LAVA_PRODUCT_NAME: 'LocalLedger Pro', LAVA_OFFER_ID_PASS: 'pass-offer', LAVA_PRODUCT_NAME_PASS: 'Day Pass' };
+  assert.equal((await (await handle(req('GET', '/api/health'), e2)).json()).checkoutPass, true);
+  const calls = [];
+  const fetch = fakeFetch([
+    ['/api/v3/invoice', async () => ({ status: 201, body: { id: INV, paymentUrl: 'https://pay' } })],
+    [`/api/v1/invoices/${INV}`, async () => ({ body: { id: INV, status: 'COMPLETED', datetime: '2026-10-13T08:00:00Z', receipt: { amount: 5, currency: 'USD' }, buyer: { email: 'a@b.co' }, product: { name: 'Day Pass' } } })],
+  ], calls);
+  await handle(req('POST', '/api/checkout', { email: 'a@b.co', product: 'pass' }), e2, { fetch });
+  assert.equal(JSON.parse(calls[0].init.body).offerId, 'pass-offer');
+  const body = await (await handle(req('POST', '/api/claim', { invoiceId: INV }), e2, { fetch })).json();
+  const v = await verifyLicense(body.license, publicJwk);
+  assert.equal(v.plan, 'pass');
+  assert.equal(v.issuedAt, Date.parse('2026-10-13T08:00:00Z') / 1000, 'the 24 hours run from the payment, not from a later claim');
+  const day = JSON.parse(await e2.LL_KV.get(`day:${new Date().toISOString().slice(0, 10)}`));
+  assert.equal(day.ev.pass_purchase, 1);
 });

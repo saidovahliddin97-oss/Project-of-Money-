@@ -185,6 +185,10 @@ $('#upgrade-btn').addEventListener('click', () => {
   $('#free-download').hidden = true;
   pro.open('');
 });
+$('#buy-pass')?.addEventListener('click', () => {
+  $('#free-download').hidden = true;
+  pro.open('', { pass: true });
+});
 $('#buy-bundle')?.addEventListener('click', () => {
   $('#free-download').hidden = true;
   pro.open('', { bundle: true });

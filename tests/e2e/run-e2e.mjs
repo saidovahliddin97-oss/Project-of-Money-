@@ -58,8 +58,8 @@ const lava = createServer(async (req, res) => {
     if (!inv) return send(404, { error: 'not found' });
     return send(200, {
       id: m[1], status: inv.status, datetime: new Date().toISOString(),
-      receipt: { amount: inv.body.offerId === 'bundle-offer' ? 49 : 29, currency: inv.body.currency, fee: 2.32 },
-      buyer: { email: inv.body.email }, product: { name: inv.body.offerId === 'bundle-offer' ? 'Aurora Bundle' : 'LocalLedger Pro', offer: 'Lifetime' },
+      receipt: { amount: inv.body.offerId === 'bundle-offer' ? 49 : inv.body.offerId === 'pass-offer' ? 5 : 29, currency: inv.body.currency, fee: 2.32 },
+      buyer: { email: inv.body.email }, product: { name: inv.body.offerId === 'bundle-offer' ? 'Aurora Bundle' : inv.body.offerId === 'pass-offer' ? 'Day Pass' : 'LocalLedger Pro', offer: 'Lifetime' },
     });
   }
   send(404, { error: 'no route' });
@@ -75,6 +75,7 @@ const app = await startServer({
     LAVA_API_KEY: 'test-lava-key', LAVA_OFFER_ID: '836b9fc5-7ae9-4a27-9642-592bc44072b7', LAVA_API_BASE: `http://localhost:${LAVA_PORT}`,
     LICENSE_PRIVATE_JWK: JSON.stringify(privateJwk), SITE_URL: `http://localhost:${APP_PORT}`, LAVA_PRODUCT_NAME: 'LocalLedger Pro', LL_KV: kv,
     LAVA_OFFER_ID_BUNDLE: 'bundle-offer', LAVA_PRODUCT_NAME_BUNDLE: 'Aurora Bundle',
+    LAVA_OFFER_ID_PASS: 'pass-offer', LAVA_PRODUCT_NAME_PASS: 'Day Pass',
   },
 });
 const BASE = `http://localhost:${APP_PORT}`;
@@ -315,6 +316,33 @@ try {
       await pb.goto(BASE + path);
       await pb.locator('#pro-badge:not([hidden])').waitFor({ timeout: 10000 });
     }
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  });
+
+  await step('24-hour pass: $5 from the landing page unlocks both tools, expires after a day', async () => {
+    const ctx = await browser.newContext();
+    const pp = await ctx.newPage();
+    const errs = [];
+    pp.on('pageerror', (e) => errs.push(e.message));
+    await pp.goto(BASE + '/');
+    await pp.locator('#buy-pass').waitFor({ state: 'visible' });
+    await pp.click('#buy-pass');
+    assert.equal(await pp.locator('input[name=bundle][value=pass]').isChecked(), true);
+    assert.equal(await pp.locator('#pro-dialog [data-price]').textContent(), '$5');
+    await pp.fill('#checkout-form input[name=email]', 'once@example.com');
+    await Promise.all([pp.waitForURL('**/success.html', { timeout: 15000 }), pp.click('#checkout-form button[type=submit]')]);
+    await pp.locator('[data-state=done]:not([hidden])').waitFor({ timeout: 15000 });
+    for (const path of ['/app.html', '/iif.html']) {
+      await pp.goto(BASE + path);
+      await pp.locator('#pro-badge:not([hidden])').waitFor({ timeout: 10000 });
+    }
+    // 25 hours later the same key no longer unlocks anything.
+    const later = Date.now() + 25 * 3600 * 1000;
+    await pp.addInitScript((t) => { const D = Date; Date.now = () => t; }, later);
+    await pp.goto(BASE + '/app.html');
+    await pp.waitForTimeout(1500);
+    assert.equal(await pp.locator('#pro-badge').isHidden(), true);
     assert.deepEqual(errs, []);
     await ctx.close();
   });

@@ -101,6 +101,7 @@ payroll => Payroll Expenses</textarea>
       <h2 id="pricing">Pricing</h2>
       <p>Preview any file and export up to 15 transactions free. <strong>IIF Kit Pro: $29 one-time</strong> for unlimited exports. 14-day refund if it doesn't work for you.</p>
       <p><button type="button" id="buy-btn" class="btn">Get IIF Kit Pro — $29</button></p>
+      <p data-pass-only hidden>One-off import? <button type="button" id="buy-pass" class="link">24-hour pass — $5</button>, unlimited exports for a day.</p>
       <p data-bundle-only hidden>Also get PDF statements into Excel, QuickBooks Online and Xero: <strong>IIF Kit + LocalLedger — $49 one-time</strong> (save $9), one key for both. <button type="button" id="buy-bundle" class="link">Get both</button></p>
 
       <h2>FAQ</h2>
@@ -123,7 +124,8 @@ payroll => Payroll Expenses</textarea>
       <fieldset id="bundle-choice" class="plan-choice" hidden>
         <legend>Choose</legend>
         <label class="plan-opt"><input type="radio" name="bundle" value="single" checked><span><strong>IIF Kit Pro</strong> <span data-single-price>$29</span></span></label>
-        <label class="plan-opt"><input type="radio" name="bundle" value="bundle"><span><strong>IIF Kit + LocalLedger</strong> <span data-bundle-price>$49</span> <em class="save">save $9</em><small class="muted">Also convert PDF statements to Excel, QuickBooks Online, Xero, QIF and OFX. One key unlocks both.</small></span></label>
+        <label class="plan-opt" data-offer="bundle" hidden><input type="radio" name="bundle" value="bundle"><span><strong>IIF Kit + LocalLedger</strong> <span data-bundle-price>$49</span> <em class="save">save $9</em><small class="muted">Also convert PDF statements to Excel, QuickBooks Online, Xero, QIF and OFX. One key unlocks both.</small></span></label>
+        <label class="plan-opt" data-offer="pass" hidden><input type="radio" name="bundle" value="pass"><span><strong>24-hour pass</strong> <span data-pass-price>$5</span><small class="muted">One-off job? Unlimited exports in both tools for 24 hours. No subscription.</small></span></label>
       </fieldset>
       <label>Email for your license key
         <input name="email" type="email" required autocomplete="email" placeholder="you@company.com">
@@ -137,7 +139,7 @@ payroll => Payroll Expenses</textarea>
         </label>
       </div>
       <button type="submit" class="btn btn-wide">Continue to secure checkout</button>
-      <p class="fine">Pay <strong data-price>$29</strong> once. Payments are processed by lava.top (Lavalane Ltd, Cyprus). 14-day money-back guarantee.</p>
+      <p class="fine">Pay <strong data-price>$29</strong> <span data-once>once</span>. Payments are processed by lava.top (Lavalane Ltd, Cyprus). 14-day money-back guarantee.</p>
       <p id="checkout-error" class="error" role="alert"></p>
     </form>
     <button type="button" id="free-download" class="btn btn-ghost btn-wide" hidden>Download the first 15 rows for free</button>
