@@ -13,18 +13,27 @@ import { matchDateAtStart, detectDateOrder, resolveDate } from './dates.js';
  */
 
 const ROLE_WORDS = [
-  ['debit', /^(debits?|withdrawals?|paid\s*out|money\s*out|payments?\s*(?:&|and)?\s*debits?|charges?|outgoings?|spent|out|dr|расход|списание|списания|списано|дебет|снятие|снятия|сумма списания|расходные операции)$/i],
-  ['credit', /^(credits?|deposits?(?:\s*(?:&|and)\s*(?:other\s*)?credits?)?|paid\s*in|money\s*in|receipts?|incomings?|received|in|cr|приход|поступление|поступления|зачисление|зачисления|зачислено|кредит|пополнение|пополнения|сумма зачисления|приходные операции)$/i],
-  ['balance', /^(balance|running\s*balance|balance\s*\(.*\)|ledger\s*balance|available\s*balance|остаток|баланс|сальдо)$/i],
-  ['amount', /^(amount|amount\s*\(.*\)|transaction\s*amount|value|sum|сумма|сумма операции|сумма в валюте счета)$/i],
-  ['date', /^((transaction|trans\.?|posting|post|value|effective)?\s*date|date\s*posted|дата|дата операции|дата проводки|дата документа)$/i],
-  ['desc', /^(description|details|transaction\s*details|particulars|narrative|memo|payee|merchant|reference|transaction|transactions|описание|описание операции|назначение|назначение платежа|детали|операция|контрагент|наименование)$/i],
+  ['debit', /^(debits?|withdrawals?|paid\s*out|money\s*out|payments?\s*(?:&|and)?\s*debits?|charges?|outgoings?|spent|out|dr)$/i],
+  ['credit', /^(credits?|deposits?(?:\s*(?:&|and)\s*(?:other\s*)?credits?)?|paid\s*in|money\s*in|receipts?|incomings?|received|in|cr)$/i],
+  ['balance', /^(balance|running\s*balance|balance\s*\(.*\)|ledger\s*balance|available\s*balance)$/i],
+  ['amount', /^(amount|amount\s*\(.*\)|transaction\s*amount|value|sum)$/i],
+  ['date', /^((transaction|trans\.?|posting|post|value|effective)?\s*date|date\s*posted)$/i],
+  ['desc', /^(description|details|transaction\s*details|particulars|narrative|memo|payee|merchant|reference|transaction|transactions)$/i],
 ];
 
-const OPENING_RE = /\b(opening|previous|beginning|starting|start)\s+balance\b|\bbalance\s+(brought|b\/?f)\b|\bbrought\s+forward\b/i;
-// Russian-language statements (Kaspi, Halyk, Freedom, Ameria…): opening/closing balance labels.
+// Russian-language statements (Kaspi, Halyk, Freedom, Ameria…), opt-in via { ru: true }
+// so the English parsing used by LocalLedger and IIF Kit is unchanged.
+const ROLE_WORDS_RU = [
+  ['debit', /^(расход|списание|списания|списано|дебет|снятие|снятия|сумма списания|расходные операции)$/i],
+  ['credit', /^(приход|поступление|поступления|зачисление|зачисления|зачислено|кредит|пополнение|пополнения|сумма зачисления|приходные операции)$/i],
+  ['balance', /^(остаток|баланс|сальдо)$/i],
+  ['amount', /^(сумма|сумма операции|сумма в валюте счета)$/i],
+  ['date', /^(дата|дата операции|дата проводки|дата документа)$/i],
+  ['desc', /^(описание|описание операции|назначение|назначение платежа|детали|операция|контрагент|наименование)$/i],
+];
 const OPENING_RU = /(входящий|начальный)\s+остаток|остаток\s+на\s+начало|сальдо\s+на\s+начало|входящее\s+сальдо/i;
 const CLOSING_RU = /(исходящий|конечный)\s+остаток|остаток\s+на\s+конец|сальдо\s+на\s+конец|исходящее\s+сальдо/i;
+const OPENING_RE = /\b(opening|previous|beginning|starting|start)\s+balance\b|\bbalance\s+(brought|b\/?f)\b|\bbrought\s+forward\b/i;
 const CLOSING_RE = /\b(closing|ending|new|end)\s+balance\b|\bbalance\s+(carried|c\/?f)\b|\bcarried\s+forward\b/i;
 const NOISE_RE = /\b(page\s+\d+(\s+of\s+\d+)?|continued\s+(on|from)|statement\s+(date|period)|account\s+(number|no\.?)|sort\s+code|iban|swift|bic|customer\s+service|www\.|https?:\/\/)\b/i;
 const TOTAL_RE = /\b(total|subtotal|sub-total|summary|totals|fees\s+charged|interest\s+charged|minimum\s+payment|payment\s+due|credit\s+limit|available\s+credit)\b/i;
@@ -37,6 +46,7 @@ const CARD_RE = /\b(credit\s+card|card\s+statement|minimum\s+payment|credit\s+li
 export function parseStatement(lines, opts = {}) {
   const warnings = [];
   const docText = lines.map((l) => l.text).join('\n');
+  const ru = Boolean(opts.ru);
   const kind = opts.kind && opts.kind !== 'auto' ? opts.kind : CARD_RE.test(docText) ? 'card' : 'bank';
 
   // ---- Pass 1: classify lines --------------------------------------------
@@ -49,7 +59,7 @@ export function parseStatement(lines, opts = {}) {
 
   for (const line of lines) {
     if (prevLine && line.page !== prevLine.page) lastTxnIdx = -1;
-    const h = detectHeader(line);
+    const h = detectHeader(line, ru);
     if (h) {
       header = h;
       prevLine = line;
@@ -57,15 +67,15 @@ export function parseStatement(lines, opts = {}) {
       continue;
     }
 
-    const parsed = splitLine(line, header);
+    const parsed = splitLine(line, header, ru);
     const lowered = parsed.description.toLowerCase();
 
-    if ((OPENING_RE.test(line.text) || OPENING_RU.test(line.text)) && parsed.amounts.length) {
+    if ((OPENING_RE.test(line.text) || (ru && OPENING_RU.test(line.text))) && parsed.amounts.length) {
       if (opening === null) opening = pickBalanceAmount(parsed);
       prevLine = line;
       continue;
     }
-    if ((CLOSING_RE.test(line.text) || CLOSING_RU.test(line.text)) && parsed.amounts.length) {
+    if ((CLOSING_RE.test(line.text) || (ru && CLOSING_RU.test(line.text))) && parsed.amounts.length) {
       closing = pickBalanceAmount(parsed);
       prevLine = line;
       lastTxnIdx = -1;
@@ -160,13 +170,13 @@ export function parseStatement(lines, opts = {}) {
   return { transactions: txns, openingBalance: opening, closingBalance: closing, kind, dateOrder: order, warnings, reconciliation };
 }
 
-function detectHeader(line) {
+function detectHeader(line, ru = false) {
   if (line.cells.length < 2) return null;
   const roles = [];
   let hits = 0;
   for (const c of line.cells) {
     const t = c.text.replace(/[:*]/g, '').trim();
-    for (const [role, re] of ROLE_WORDS) {
+    for (const [role, re] of ru ? [...ROLE_WORDS, ...ROLE_WORDS_RU] : ROLE_WORDS) {
       if (re.test(t)) {
         roles.push({ role, x0: c.x0, x1: c.x1, cx: (c.x0 + c.x1) / 2 });
         hits++;
@@ -183,7 +193,7 @@ function detectHeader(line) {
 }
 
 /** Split a line into date, description and right-hand amount cells. */
-function splitLine(line, header) {
+function splitLine(line, header, ru = false) {
   const cells = line.cells.map((c) => ({ ...c }));
   let dateRaw = null;
 
@@ -216,11 +226,12 @@ function splitLine(line, header) {
       continue;
     }
     // An amount glued to the description with a single space ("COFFEE 4.50",
-    // "PAYMENT 120.00 CR", "Входящий остаток 1 250 000,00"): test the last one to four words.
+    // "PAYMENT 120.00 CR"): test the last one or two words.
     if (amounts.length < 3) {
       const words = last.text.split(' ');
       let taken = 0;
-      for (const n of [4, 3, 2, 1]) {
+      // Russian amounts are space-grouped ("1 250 000,00"), so look at up to four words there.
+      for (const n of ru ? [4, 3, 2, 1] : [2, 1]) {
         if (words.length > n && isAmountToken(words.slice(-n).join(' '))) {
           taken = n;
           break;

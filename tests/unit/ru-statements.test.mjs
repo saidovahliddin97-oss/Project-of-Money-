@@ -13,7 +13,7 @@ const fx = (n) => new URL(`../fixtures/ru/${n}`, import.meta.url);
 
 test('Russian PDF statement: rows, opening and closing balance', async () => {
   const { lines } = await extractLines(pdfjs, new Uint8Array(readFileSync(fx('statement-ru.pdf'))));
-  const r = parseStatement(lines, { kind: 'bank' });
+  const r = parseStatement(lines, { kind: 'bank', ru: true });
   assert.equal(r.transactions.length, 5);
   assert.deepEqual(r.transactions.map((t) => t.amount), [410000, -152300.5, 2600000, -1980000, -352320.1]);
   assert.equal(r.transactions[0].date, '2025-01-05');
@@ -26,9 +26,17 @@ test('Russian PDF statement: rows, opening and closing balance', async () => {
 });
 
 test('Russian CSV with Приход/Расход/Остаток columns', () => {
-  const r = importCsv(readFileSync(fx('kaspi-like.csv'), 'utf8'), {});
+  const r = importCsv(readFileSync(fx('kaspi-like.csv'), 'utf8'), { ru: true });
   assert.deepEqual(r.transactions.map((t) => t.amount), [410000, -152300.5, 2600000, -1980000]);
   const t = yearTotals(r.transactions, 2025);
   assert.equal(t.opening, 1250000);
   assert.equal(t.closing, 2127699.5);
+});
+
+test('Russian rules are opt-in: the default (LocalLedger/IIF Kit) parser ignores them', async () => {
+  const { lines } = await extractLines(pdfjs, new Uint8Array(readFileSync(fx('statement-ru.pdf'))));
+  const r = parseStatement(lines, { kind: 'bank' });
+  assert.equal(r.reconciliation?.opening ?? null, null);
+  const csv = importCsv(readFileSync(fx('kaspi-like.csv'), 'utf8'), {});
+  assert.notDeepEqual(csv.transactions.map((t) => t.amount), [410000, -152300.5, 2600000, -1980000]);
 });

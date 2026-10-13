@@ -43,12 +43,12 @@ async function readFile(acc, file) {
       const data = new Uint8Array(await file.arrayBuffer());
       const { lines, textItems } = await extractLines(pdfjs, data, {});
       if (!textItems) throw new Error('В PDF нет текстового слоя (похоже на скан). Скачайте выписку из интернет-банка заново или используйте CSV.');
-      const r = parseStatement(lines, { kind: 'bank' });
+      const r = parseStatement(lines, { kind: 'bank', ru: true });
       entry.txns = r.transactions;
       entry.opening = r.reconciliation?.opening ?? null;
       entry.closing = r.reconciliation?.closing ?? null;
     } else {
-      const r = importCsv(await file.text(), {});
+      const r = importCsv(await file.text(), { ru: true });
       entry.txns = r.transactions;
     }
     entry.status = entry.txns.length ? `Операций: ${entry.txns.length}` : 'Операции не найдены — введите итоги вручную';

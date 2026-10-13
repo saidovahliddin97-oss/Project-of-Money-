@@ -5,12 +5,12 @@ import { parseAmount, round2 } from './amounts.js';
 import { matchDateAtStart, detectDateOrder, resolveDate } from './dates.js';
 
 const HEADER_HINTS = {
-  date: /^(date|transaction date|trans\.? date|posting date|posted date|post date|booking date|value date|datum|fecha|data|date posted|дата|дата операции|дата проводки|дата документа)$/i,
-  description: /^(description|details|transaction details|narrative|particulars|payee|merchant|name|memo|transaction|reference|beschreibung|concepto|descripción|libellé|описание|описание операции|назначение|назначение платежа|детали|операция|контрагент|наименование)$/i,
-  amount: /^(amount|transaction amount|value|sum|amount \(.*\)|betrag|importe|montant|сумма|сумма операции|сумма в валюте счета)$/i,
-  debit: /^(debit|debits|withdrawal|withdrawals|money out|paid out|debit amount|out|charges?|расход|списание|списания|дебет|снятие|сумма списания)$/i,
-  credit: /^(credit|credits|deposit|deposits|money in|paid in|credit amount|in|приход|поступление|поступления|зачисление|зачисления|кредит|пополнение|сумма зачисления)$/i,
-  balance: /^(balance|running balance|ledger balance|остаток|баланс|сальдо)$/i,
+  date: /^(date|transaction date|trans\.? date|posting date|posted date|post date|booking date|value date|datum|fecha|data|date posted)$/i,
+  description: /^(description|details|transaction details|narrative|particulars|payee|merchant|name|memo|transaction|reference|beschreibung|concepto|descripción|libellé)$/i,
+  amount: /^(amount|transaction amount|value|sum|amount \(.*\)|betrag|importe|montant)$/i,
+  debit: /^(debit|debits|withdrawal|withdrawals|money out|paid out|debit amount|out|charges?)$/i,
+  credit: /^(credit|credits|deposit|deposits|money in|paid in|credit amount|in)$/i,
+  balance: /^(balance|running balance|ledger balance)$/i,
   memo: /^(memo|notes?|category|type|transaction type)$/i,
 };
 
@@ -19,12 +19,23 @@ const HEADER_HINTS = {
  * @param {string[][]} rows
  * @returns {{hasHeader: boolean, date: number, description: number, amount: number, debit: number, credit: number, balance: number, memo: number}}
  */
-export function guessMapping(rows) {
+// Russian-language headers (opt-in via { ru: true }; used by «Счёт за рубежом» only).
+const HEADER_HINTS_RU = {
+  date: /^(дата|дата операции|дата проводки|дата документа)$/i,
+  description: /^(описание|описание операции|назначение|назначение платежа|детали|операция|контрагент|наименование)$/i,
+  amount: /^(сумма|сумма операции|сумма в валюте счета)$/i,
+  debit: /^(расход|списание|списания|дебет|снятие|сумма списания)$/i,
+  credit: /^(приход|поступление|поступления|зачисление|зачисления|кредит|пополнение|сумма зачисления)$/i,
+  balance: /^(остаток|баланс|сальдо)$/i,
+};
+
+export function guessMapping(rows, opts = {}) {
   const map = { hasHeader: false, date: -1, description: -1, amount: -1, debit: -1, credit: -1, balance: -1, memo: -1 };
   if (!rows.length) return map;
   const head = rows[0].map((h) => h.trim());
   for (const [key, re] of Object.entries(HEADER_HINTS)) {
-    const idx = head.findIndex((h, i) => re.test(h) && !Object.values(map).includes(i));
+    const ru = opts.ru ? HEADER_HINTS_RU[key] : null;
+    const idx = head.findIndex((h, i) => (re.test(h) || (ru && ru.test(h))) && !Object.values(map).includes(i));
     if (idx !== -1) map[key] = idx;
   }
   const found = ['date', 'description', 'amount', 'debit', 'credit'].filter((k) => map[k] !== -1).length;
@@ -78,7 +89,7 @@ function argMax(arr) {
  */
 export function importCsv(text, opts = {}) {
   const rows = parseCsv(text);
-  const mapping = opts.mapping || guessMapping(rows);
+  const mapping = opts.mapping || guessMapping(rows, { ru: opts.ru });
   const warnings = [];
   if (mapping.date === -1 || (mapping.amount === -1 && mapping.debit === -1 && mapping.credit === -1)) {
     return { transactions: [], mapping, warnings: ['Could not find date and amount columns. Please check the column mapping.'], dateOrder: null, headers: rows[0] || [] };
