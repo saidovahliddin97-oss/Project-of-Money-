@@ -385,7 +385,7 @@ async function onExport() {
   pendingFormat = format;
   track('export_locked');
   $('#free-download').hidden = false;
-  pro.open(`Your file has ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`, { one: true });
+  pro.open(`Your file has ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`, { pass: true });
 }
 
 // ---------------------------------------------------------------- misc UI

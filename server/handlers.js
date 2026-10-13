@@ -94,7 +94,7 @@ function products(env) {
   // One-off jobs: a key (plan 'pass') that unlocks both tools for 24 hours from the payment time.
   // A single full export (plan 'one'), spent in the browser after use.
   if (env.LAVA_OFFER_ID_ONE) list.push({ key: 'one', plan: 'one', offerId: env.LAVA_OFFER_ID_ONE, name: env.LAVA_PRODUCT_NAME_ONE || 'Single Export' });
-  if (env.LAVA_OFFER_ID_PASS) list.push({ key: 'pass', plan: 'pass', offerId: env.LAVA_OFFER_ID_PASS, name: env.LAVA_PRODUCT_NAME_PASS || 'Day Pass' });
+  if (env.LAVA_OFFER_ID_PASS) list.push({ key: 'pass', plan: 'pass', offerId: env.LAVA_OFFER_ID_PASS, name: env.LAVA_PRODUCT_NAME_PASS || 'Day Pass wallet' });
   return list;
 }
 
@@ -419,7 +419,7 @@ async function recordSale(env, id, amount, currency, email, product) {
     await env.LL_KV.put(`sold:${id}`, '1');
     const iif = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_IIF || 'IIF Kit Pro');
     const bundle = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_BUNDLE || 'Aurora Bundle');
-    const pass = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_PASS || 'Day Pass');
+    const pass = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_PASS || 'Day Pass wallet');
     const one = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_ONE || 'Single Export');
     // Bundles and passes count as LocalLedger purchases (money in `gross`) plus their own counter.
     const names = iif ? ['iif_purchase'] : bundle ? ['purchase', 'bundle_purchase'] : pass ? ['purchase', 'pass_purchase'] : one ? ['purchase', 'one_purchase'] : ['purchase'];

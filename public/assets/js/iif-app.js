@@ -157,7 +157,7 @@ async function onExport() {
   }
   track('export_locked');
   $('#free-download').hidden = false;
-  pro.open(`Your files have ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`, { one: true });
+  pro.open(`Your files have ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`, { pass: true });
 }
 
 async function refreshPro() {

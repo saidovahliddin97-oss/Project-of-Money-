@@ -52,7 +52,7 @@
 | LocalLedger Pro | $20 (было $29) | pro | LAVA_OFFER_ID, LAVA_PRODUCT_NAME |
 | IIF Kit Pro | $20 (было $29) | iif | LAVA_OFFER_ID_IIF, LAVA_PRODUCT_NAME_IIF |
 | Оба (`Aurora Bundle`) | $34.99 | bundle | LAVA_OFFER_ID_BUNDLE, LAVA_PRODUCT_NAME_BUNDLE |
-| Пропуск на 24 часа (`Day Pass`) | $5 | pass (24 ч от оплаты, оба продукта) | LAVA_OFFER_ID_PASS, LAVA_PRODUCT_NAME_PASS |
-| Разовая выгрузка (`Single Export`) | $1 | one (одна полная выгрузка в течение 24 ч, учёт в браузере) | LAVA_OFFER_ID_ONE, LAVA_PRODUCT_NAME_ONE |
-Цены $20 выставлены в lava.top через API (PATCH /api/v2/products). Офферы bundle/pass/one создаёт владелец в кабинете; до этого их кнопки скрыты. Минимальная цена товара в lava.top в документации не указана — $1 проверить при создании.
+| Пропуск на 24 часа (`Day Pass wallet`, Lava требует название ≥10 символов) | $5 | pass (24 ч от оплаты, оба продукта) | LAVA_OFFER_ID_PASS, LAVA_PRODUCT_NAME_PASS |
+| Разовая выгрузка (`Single Export`) — **не создана**: минимум в lava.top $5, код оставлен выключенным | $1 | one (одна полная выгрузка в течение 24 ч, учёт в браузере) | LAVA_OFFER_ID_ONE, LAVA_PRODUCT_NAME_ONE |
+Цены $20 выставлены в lava.top через API (PATCH /api/v2/products). Офферы bundle/pass/one создаёт владелец в кабинете; до этого их кнопки скрыты. Минимальная цена товара в lava.top — $5 (проверено владельцем 13.10). Офферы: Aurora Bundle 38cd136b-…, Day Pass wallet 1d3a312c-… — заданы в Cloudflare. При упоре в лимит окно предлагает пропуск $5.
 Бесплатный лимит экспорта оставлен 15 строк (просмотр без ограничений).
