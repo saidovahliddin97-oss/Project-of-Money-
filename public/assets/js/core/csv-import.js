@@ -5,12 +5,12 @@ import { parseAmount, round2 } from './amounts.js';
 import { matchDateAtStart, detectDateOrder, resolveDate } from './dates.js';
 
 const HEADER_HINTS = {
-  date: /^(date|transaction date|trans\.? date|posting date|posted date|post date|booking date|value date|datum|fecha|data|date posted)$/i,
-  description: /^(description|details|transaction details|narrative|particulars|payee|merchant|name|memo|transaction|reference|beschreibung|concepto|descripción|libellé)$/i,
-  amount: /^(amount|transaction amount|value|sum|amount \(.*\)|betrag|importe|montant)$/i,
-  debit: /^(debit|debits|withdrawal|withdrawals|money out|paid out|debit amount|out|charges?)$/i,
-  credit: /^(credit|credits|deposit|deposits|money in|paid in|credit amount|in)$/i,
-  balance: /^(balance|running balance|ledger balance)$/i,
+  date: /^(date|transaction date|trans\.? date|posting date|posted date|post date|booking date|value date|datum|fecha|data|date posted|дата|дата операции|дата проводки|дата документа)$/i,
+  description: /^(description|details|transaction details|narrative|particulars|payee|merchant|name|memo|transaction|reference|beschreibung|concepto|descripción|libellé|описание|описание операции|назначение|назначение платежа|детали|операция|контрагент|наименование)$/i,
+  amount: /^(amount|transaction amount|value|sum|amount \(.*\)|betrag|importe|montant|сумма|сумма операции|сумма в валюте счета)$/i,
+  debit: /^(debit|debits|withdrawal|withdrawals|money out|paid out|debit amount|out|charges?|расход|списание|списания|дебет|снятие|сумма списания)$/i,
+  credit: /^(credit|credits|deposit|deposits|money in|paid in|credit amount|in|приход|поступление|поступления|зачисление|зачисления|кредит|пополнение|сумма зачисления)$/i,
+  balance: /^(balance|running balance|ledger balance|остаток|баланс|сальдо)$/i,
   memo: /^(memo|notes?|category|type|transaction type)$/i,
 };
 
