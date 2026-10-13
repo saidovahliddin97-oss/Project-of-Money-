@@ -6,7 +6,7 @@ import { importCsv } from './core/csv-import.js';
 import { toIif, parseRules, categorize } from './core/iif.js';
 import { formatAmount } from './core/amounts.js';
 import { CONFIG } from './config.js';
-import { getStatus, initProDialog } from './pro.js';
+import { getStatus, initProDialog, spendOneShot } from './pro.js';
 import { track } from './track.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
@@ -144,15 +144,20 @@ function download(rows) {
 
 let pro;
 async function onExport() {
-  state.pro = (await getStatus('iif')).pro;
+  const status = await getStatus('iif');
+  state.pro = status.pro;
   if (state.pro || state.rows.length <= CONFIG.FREE_EXPORT_ROWS) {
     download(state.rows);
     track('export_free', { once: true });
+    if (status.oneShot && state.rows.length > CONFIG.FREE_EXPORT_ROWS) {
+      spendOneShot(status);
+      refreshPro();
+    }
     return;
   }
   track('export_locked');
   $('#free-download').hidden = false;
-  pro.open(`Your files have ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`);
+  pro.open(`Your files have ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`, { one: true });
 }
 
 async function refreshPro() {
@@ -184,6 +189,10 @@ pro = initProDialog({ product: 'iif', prices: PRICES, onActivated: refreshPro })
 $('#upgrade-btn').addEventListener('click', () => {
   $('#free-download').hidden = true;
   pro.open('');
+});
+$('#buy-one')?.addEventListener('click', () => {
+  $('#free-download').hidden = true;
+  pro.open('', { one: true });
 });
 $('#buy-pass')?.addEventListener('click', () => {
   $('#free-download').hidden = true;

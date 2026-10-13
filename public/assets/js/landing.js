@@ -5,6 +5,7 @@ const pro = initProDialog({ onActivated: () => (location.href = '/app.html') });
 document.getElementById('buy-btn')?.addEventListener('click', () => pro.open(''));
 document.getElementById('buy-bundle')?.addEventListener('click', () => pro.open('', { bundle: true }));
 document.getElementById('buy-pass')?.addEventListener('click', () => pro.open('', { pass: true }));
+document.getElementById('buy-one')?.addEventListener('click', () => pro.open('', { one: true }));
 
 // Hero drop zone: keep the files in this browser and open the converter with them.
 const drop = document.getElementById('home-drop');

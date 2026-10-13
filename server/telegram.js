@@ -94,7 +94,7 @@ export function digestText(date, d = {}, prev = {}) {
     '',
     `LocalLedger: визиты ${ll('visit')}${delta(0, (pe.visit || 0) - (pe.iif_visit || 0))} · загрузили файл ${ev.file_loaded || 0} · лимит ${ev.export_locked || 0} · «Купить» ${ev.checkout_start || 0} · оплаты ${ev.purchase || 0}`,
     `IIF Kit: визиты ${ev.iif_visit || 0}${delta(0, pe.iif_visit)} · загрузили файл ${ev.iif_file_loaded || 0} · «Купить» ${ev.iif_checkout_start || 0} · оплаты ${ev.iif_purchase || 0}`,
-    `Выручка: LocalLedger ${sumMoney(d.gross)} · IIF Kit ${sumMoney(d.gross_iif)}${ev.bundle_purchase ? ` · комплектов ${ev.bundle_purchase}` : ''}${ev.pass_purchase ? ` · суточных пропусков ${ev.pass_purchase}` : ''}`,
+    `Выручка: LocalLedger ${sumMoney(d.gross)} · IIF Kit ${sumMoney(d.gross_iif)}${ev.bundle_purchase ? ` · комплектов ${ev.bundle_purchase}` : ''}${ev.pass_purchase ? ` · суточных пропусков ${ev.pass_purchase}` : ''}${ev.one_purchase ? ` · разовых выгрузок ${ev.one_purchase}` : ''}`,
     '',
     `Источники: ${top(d.ref)}`,
     `Страны: ${top(Object.fromEntries(Object.entries(d.cc || {}).map(([k, v]) => [countryName(k), v])))}`,

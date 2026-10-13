@@ -413,7 +413,7 @@ for (const b of banks) {
   const peers = banks.filter((o) => o.region === b.region && o !== b).slice(0, 5);
   const faq = [
     [`Can I convert ${b.name} statements without uploading them?`, 'Yes. The conversion runs in your browser; the PDF is never sent to a server.'],
-    [`Is it free?`, 'You can preview every transaction and export up to 15 rows free. LocalLedger Pro is a one-time $29 payment for unlimited exports.'],
+    [`Is it free?`, 'You can preview every transaction and export up to 15 rows free. LocalLedger Pro is a one-time $20 payment for unlimited exports, or $1 for a single export.'],
     [`Does it work with scanned ${b.name} statements?`, 'No. It needs text-based PDFs, like the ones downloaded from online banking. Scans need OCR first.'],
   ];
   const body = `    <p class="crumbs"><a href="/">Home</a> › <a href="/banks/">Banks</a></p>

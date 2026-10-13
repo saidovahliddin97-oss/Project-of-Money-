@@ -99,10 +99,11 @@ payroll => Payroll Expenses</textarea>
       <p class="muted">The file follows Intuit's published IIF transaction format (tab-separated TRNS/SPL/ENDTRNS records). Intuit does not provide support for creating IIF files; test with a small file first.</p>
 
       <h2 id="pricing">Pricing</h2>
-      <p>Preview any file and export up to 15 transactions free. <strong>IIF Kit Pro: $29 one-time</strong> for unlimited exports. 14-day refund if it doesn't work for you.</p>
-      <p><button type="button" id="buy-btn" class="btn">Get IIF Kit Pro — $29</button></p>
-      <p data-pass-only hidden>One-off import? <button type="button" id="buy-pass" class="link">24-hour pass — $5</button>, unlimited exports for a day.</p>
-      <p data-bundle-only hidden>Also get PDF statements into Excel, QuickBooks Online and Xero: <strong>IIF Kit + LocalLedger — $49 one-time</strong> (save $9), one key for both. <button type="button" id="buy-bundle" class="link">Get both</button></p>
+      <p>Preview any file and export up to 15 transactions free. <strong>IIF Kit Pro: $20 one-time</strong> <s class="muted">$29</s> launch price for unlimited exports. 14-day refund if it doesn't work for you.</p>
+      <p><button type="button" id="buy-btn" class="btn">Get IIF Kit Pro — $20</button></p>
+      <p data-one-only hidden>Only one file? <button type="button" id="buy-one" class="link">Export it for $1</button>.</p>
+      <p data-pass-only hidden>Several imports today? <button type="button" id="buy-pass" class="link">24-hour pass — $5</button>, unlimited exports for a day.</p>
+      <p data-bundle-only hidden>Also get PDF statements into Excel, QuickBooks Online and Xero: <strong>IIF Kit + LocalLedger — $34.99 one-time</strong> (save $5), one key for both. <button type="button" id="buy-bundle" class="link">Get both</button></p>
 
       <h2>FAQ</h2>
       <details><summary>Which files work?</summary><p>CSV/TSV exports from online banking (date, description and amount or debit/credit columns are detected automatically) and text-based PDF statements. Scanned PDFs are not supported.</p></details>
@@ -123,8 +124,9 @@ payroll => Payroll Expenses</textarea>
     <form id="checkout-form" class="stack">
       <fieldset id="bundle-choice" class="plan-choice" hidden>
         <legend>Choose</legend>
-        <label class="plan-opt"><input type="radio" name="bundle" value="single" checked><span><strong>IIF Kit Pro</strong> <span data-single-price>$29</span></span></label>
-        <label class="plan-opt" data-offer="bundle" hidden><input type="radio" name="bundle" value="bundle"><span><strong>IIF Kit + LocalLedger</strong> <span data-bundle-price>$49</span> <em class="save">save $9</em><small class="muted">Also convert PDF statements to Excel, QuickBooks Online, Xero, QIF and OFX. One key unlocks both.</small></span></label>
+        <label class="plan-opt"><input type="radio" name="bundle" value="single" checked><span><strong>IIF Kit Pro</strong> <span data-single-price>$20</span> <s class="muted">$29</s></span></label>
+        <label class="plan-opt" data-offer="bundle" hidden><input type="radio" name="bundle" value="bundle"><span><strong>IIF Kit + LocalLedger</strong> <span data-bundle-price>$34.99</span> <em class="save">save $5</em><small class="muted">Also convert PDF statements to Excel, QuickBooks Online, Xero, QIF and OFX. One key unlocks both.</small></span></label>
+        <label class="plan-opt" data-offer="one" hidden><input type="radio" name="bundle" value="one"><span><strong>Single export</strong> <span data-one-price>$1</span><small class="muted">One full export of your current files, any format. Use it within 24 hours.</small></span></label>
         <label class="plan-opt" data-offer="pass" hidden><input type="radio" name="bundle" value="pass"><span><strong>24-hour pass</strong> <span data-pass-price>$5</span><small class="muted">One-off job? Unlimited exports in both tools for 24 hours. No subscription.</small></span></label>
       </fieldset>
       <label>Email for your license key
@@ -139,7 +141,7 @@ payroll => Payroll Expenses</textarea>
         </label>
       </div>
       <button type="submit" class="btn btn-wide">Continue to secure checkout</button>
-      <p class="fine">Pay <strong data-price>$29</strong> <span data-once>once</span>. Payments are processed by lava.top (Lavalane Ltd, Cyprus). 14-day money-back guarantee.</p>
+      <p class="fine">Pay <strong data-price>$20</strong> <span data-once>once</span>. Payments are processed by lava.top (Lavalane Ltd, Cyprus). 14-day money-back guarantee.</p>
       <p id="checkout-error" class="error" role="alert"></p>
     </form>
     <button type="button" id="free-download" class="btn btn-ghost btn-wide" hidden>Download the first 15 rows for free</button>

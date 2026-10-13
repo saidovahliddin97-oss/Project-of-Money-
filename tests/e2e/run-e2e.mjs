@@ -58,8 +58,8 @@ const lava = createServer(async (req, res) => {
     if (!inv) return send(404, { error: 'not found' });
     return send(200, {
       id: m[1], status: inv.status, datetime: new Date().toISOString(),
-      receipt: { amount: inv.body.offerId === 'bundle-offer' ? 49 : inv.body.offerId === 'pass-offer' ? 5 : 29, currency: inv.body.currency, fee: 2.32 },
-      buyer: { email: inv.body.email }, product: { name: inv.body.offerId === 'bundle-offer' ? 'Aurora Bundle' : inv.body.offerId === 'pass-offer' ? 'Day Pass' : 'LocalLedger Pro', offer: 'Lifetime' },
+      receipt: { amount: { 'bundle-offer': 34.99, 'pass-offer': 5, 'one-offer': 1 }[inv.body.offerId] || 20, currency: inv.body.currency, fee: 2.32 },
+      buyer: { email: inv.body.email }, product: { name: { 'bundle-offer': 'Aurora Bundle', 'pass-offer': 'Day Pass', 'one-offer': 'Single Export' }[inv.body.offerId] || 'LocalLedger Pro', offer: 'Lifetime' },
     });
   }
   send(404, { error: 'no route' });
@@ -76,6 +76,7 @@ const app = await startServer({
     LICENSE_PRIVATE_JWK: JSON.stringify(privateJwk), SITE_URL: `http://localhost:${APP_PORT}`, LAVA_PRODUCT_NAME: 'LocalLedger Pro', LL_KV: kv,
     LAVA_OFFER_ID_BUNDLE: 'bundle-offer', LAVA_PRODUCT_NAME_BUNDLE: 'Aurora Bundle',
     LAVA_OFFER_ID_PASS: 'pass-offer', LAVA_PRODUCT_NAME_PASS: 'Day Pass',
+    LAVA_OFFER_ID_ONE: 'one-offer', LAVA_PRODUCT_NAME_ONE: 'Single Export',
   },
 });
 const BASE = `http://localhost:${APP_PORT}`;
@@ -171,6 +172,9 @@ try {
   await step('checkout → fake lava.top → success page issues a license', async () => {
     await page.click('#btn-export');
     await page.locator('#pro-dialog[open]').waitFor();
+    // The limit dialog preselects the $1 single export; this flow buys LocalLedger Pro.
+    await page.locator('#bundle-choice:not([hidden])').waitFor();
+    await page.click('input[name=bundle][value=single]');
     await page.fill('#checkout-form input[name=email]', 'Buyer@Example.com');
     await page.selectOption('#checkout-currency', 'EUR');
     await Promise.all([page.waitForURL('**/success.html', { timeout: 15000 }), page.click('#checkout-form button[type=submit]')]);
@@ -307,7 +311,7 @@ try {
     await pb.click('#buy-bundle');
     await pb.locator('#bundle-choice:not([hidden])').waitFor();
     assert.equal(await pb.locator('input[name=bundle][value=bundle]').isChecked(), true);
-    assert.equal(await pb.locator('#pro-dialog [data-price]').textContent(), '$49');
+    assert.equal(await pb.locator('#pro-dialog [data-price]').textContent(), '$34.99');
     await pb.fill('#checkout-form input[name=email]', 'both@example.com');
     await Promise.all([pb.waitForURL('**/success.html', { timeout: 15000 }), pb.click('#checkout-form button[type=submit]')]);
     await pb.locator('[data-state=done]:not([hidden])').waitFor({ timeout: 15000 });
@@ -343,6 +347,36 @@ try {
     await pp.goto(BASE + '/app.html');
     await pp.waitForTimeout(1500);
     assert.equal(await pp.locator('#pro-badge').isHidden(), true);
+    assert.deepEqual(errs, []);
+    await ctx.close();
+  });
+
+  await step('single export: the limit dialog offers $1, it unlocks exactly one full export', async () => {
+    const ctx = await browser.newContext();
+    const po = await ctx.newPage();
+    const errs = [];
+    po.on('pageerror', (e) => errs.push(e.message));
+    const load = async () => {
+      await po.setInputFiles('#file-input', [join(fixtures, 'us.pdf'), join(fixtures, 'uk.pdf'), join(fixtures, 'card.pdf')]);
+      await po.waitForFunction(() => document.querySelectorAll('#txn-body tr').length === 19, null, { timeout: 15000 });
+    };
+    await po.goto(BASE + '/app.html');
+    await load();
+    await po.click('#btn-export');
+    await po.locator('#pro-dialog[open]').waitFor();
+    await po.locator('#bundle-choice:not([hidden])').waitFor();
+    await po.click('input[name=bundle][value=one]');
+    assert.equal(await po.locator('#pro-dialog [data-price]').textContent(), '$1');
+    await po.fill('#checkout-form input[name=email]', 'one@example.com');
+    await Promise.all([po.waitForURL('**/success.html', { timeout: 15000 }), po.click('#checkout-form button[type=submit]')]);
+    await po.locator('[data-state=done]:not([hidden])').waitFor({ timeout: 15000 });
+    await po.goto(BASE + '/app.html');
+    await load();
+    await po.selectOption('#export-format', 'csv');
+    const [dl] = await Promise.all([po.waitForEvent('download'), po.click('#btn-export')]);
+    assert.ok(readFileSync(await dl.path(), 'utf8').trim().split('\n').length >= 20, 'the paid export has all 19 rows');
+    await po.click('#btn-export');
+    await po.locator('#pro-dialog[open]').waitFor({ timeout: 5000 });
     assert.deepEqual(errs, []);
     await ctx.close();
   });

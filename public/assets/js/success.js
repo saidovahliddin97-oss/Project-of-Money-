@@ -30,7 +30,7 @@ async function run(invoiceId) {
         back.href = '/iif';
         back.textContent = 'Go to IIF Kit';
       }
-      if (back && (r.plan === 'bundle' || r.plan === 'pass')) {
+      if (back && ['bundle', 'pass', 'one'].includes(r.plan)) {
         back.insertAdjacentHTML('afterend', ' <a class="btn btn-ghost" href="/iif">Open IIF Kit</a>');
         back.textContent = 'Open LocalLedger';
       }

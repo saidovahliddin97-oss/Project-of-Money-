@@ -51,9 +51,13 @@ export function getPublicKey() {
 // A 'bundle' key unlocks both and is stored under both products; a 'pass' key does the
 // same for PASS_HOURS after the payment.
 const storageKey = (plan) => (plan === 'iif' ? `${LS_LICENSE}_iif` : LS_LICENSE);
-const covers = (keyPlan, plan) => keyPlan === plan || keyPlan === 'bundle' || keyPlan === 'pass';
+// A 'one' key pays for a single full export in either tool (within PASS_HOURS of payment).
+const SHARED = ['bundle', 'pass', 'one'];
+const covers = (keyPlan, plan) => keyPlan === plan || SHARED.includes(keyPlan);
 const passEnds = (v) => (v.issuedAt + CONFIG.PASS_HOURS * 3600) * 1000;
-const expired = (v) => v.plan === 'pass' && Date.now() > passEnds(v);
+const usedKey = (v) => `ll_one_used_${v.ref}`;
+const expired = (v) => (v.plan === 'pass' || v.plan === 'one') && Date.now() > passEnds(v);
+const spent = (v) => v.plan === 'one' && Boolean(lsGet(usedKey(v)));
 const memory = {};
 
 /** @returns {Promise<{pro: boolean, email?: string}>} */
@@ -62,7 +66,8 @@ export async function getStatus(plan = 'pro') {
   if (!key) return { pro: false };
   const v = await verifyLicense(key, await getPublicKey());
   if (!v.valid || !covers(v.plan || 'pro', plan)) return { pro: false };
-  if (expired(v)) return { pro: false, passExpired: true };
+  if (expired(v) || spent(v)) return { pro: false, passExpired: true };
+  if (v.plan === 'one') return { pro: true, email: v.email, oneShot: true, ref: v.ref };
   return v.plan === 'pass' ? { pro: true, email: v.email, until: new Date(passEnds(v)) } : { pro: true, email: v.email };
 }
 
@@ -71,14 +76,20 @@ export async function activate(key, expectedPlan) {
   if (!v.valid) return v;
   const plan = v.plan || 'pro';
   if (expectedPlan && !covers(plan, expectedPlan)) return { valid: false, reason: `This key is for ${plan === 'iif' ? 'IIF Kit' : 'LocalLedger'}, not this product.` };
-  if (expired(v)) return { valid: false, reason: 'This 24-hour pass has expired.' };
+  if (expired(v)) return { valid: false, reason: 'This key has expired.' };
+  if (spent(v)) return { valid: false, reason: 'This single-export key has already been used.' };
   const clean = key.trim().replace(/\s+/g, '');
-  for (const p of plan === 'bundle' || plan === 'pass' ? ['pro', 'iif'] : [plan]) {
+  for (const p of SHARED.includes(plan) ? ['pro', 'iif'] : [plan]) {
     memory[p] = clean;
     lsSet(storageKey(p), clean);
   }
   track('license_activated');
   return v;
+}
+
+/** Marks a single-export key as used after its one full export. */
+export function spendOneShot(status) {
+  if (status?.oneShot && status.ref) lsSet(`ll_one_used_${status.ref}`, new Date().toISOString());
 }
 
 export function deactivate(plan = 'pro') {
@@ -171,12 +182,13 @@ export function initProDialog({ onActivated, product = 'ledger', prices = { USD:
     single: prices,
     bundle: { USD: CONFIG.PRICE_BUNDLE_USD, EUR: CONFIG.PRICE_BUNDLE_EUR },
     pass: { USD: CONFIG.PRICE_PASS_USD, EUR: CONFIG.PRICE_PASS_EUR },
+    one: { USD: CONFIG.PRICE_ONE_USD, EUR: CONFIG.PRICE_ONE_EUR },
   };
   const setPrice = () => {
     if (priceEl) priceEl.textContent = money(table[choice()] || prices);
     for (const [k, p] of Object.entries(table)) dlg.querySelectorAll(`[data-${k}-price]`).forEach((el) => (el.textContent = money(p)));
     const once = dlg.querySelector('[data-once]');
-    if (once) once.textContent = choice() === 'pass' ? `for ${CONFIG.PASS_HOURS} hours of unlimited use` : 'once';
+    if (once) once.textContent = choice() === 'pass' ? `for ${CONFIG.PASS_HOURS} hours of unlimited use` : choice() === 'one' ? 'for one full export' : 'once';
   };
   cur?.addEventListener('change', setPrice);
   dlg.querySelectorAll('input[name=bundle]').forEach((r) => r.addEventListener('change', setPrice));
@@ -185,11 +197,12 @@ export function initProDialog({ onActivated, product = 'ledger', prices = { USD:
     fetch('/api/health', { cache: 'no-store' })
       .then((r) => r.json())
       .then((h) => {
-        const on = { bundle: Boolean(h.checkoutBundle), pass: Boolean(h.checkoutPass) };
+        const on = { bundle: Boolean(h.checkoutBundle), pass: Boolean(h.checkoutPass), one: Boolean(h.checkoutOne) };
         dlg.querySelectorAll('[data-offer]').forEach((el) => (el.hidden = !on[el.dataset.offer]));
-        choiceBox.hidden = !on.bundle && !on.pass;
+        choiceBox.hidden = !on.bundle && !on.pass && !on.one;
         document.querySelectorAll('[data-bundle-only]').forEach((el) => (el.hidden = !on.bundle));
         document.querySelectorAll('[data-pass-only]').forEach((el) => (el.hidden = !on.pass));
+        document.querySelectorAll('[data-one-only]').forEach((el) => (el.hidden = !on.one));
       })
       .catch(() => {});
   }
@@ -226,8 +239,9 @@ export function initProDialog({ onActivated, product = 'ledger', prices = { USD:
 
   dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
   return {
-    open(reason, { bundle = false, pass = false } = {}) {
-      const pick = dlg.querySelector(`input[name=bundle][value=${bundle ? 'bundle' : pass ? 'pass' : 'single'}]`);
+    open(reason, { bundle = false, pass = false, one = false } = {}) {
+      let pick = dlg.querySelector(`input[name=bundle][value=${bundle ? 'bundle' : pass ? 'pass' : one ? 'one' : 'single'}]`);
+      if (pick?.closest('[hidden]')) pick = dlg.querySelector('input[name=bundle][value=single]');
       if (pick) pick.checked = true;
       setPrice();
       const r = dlg.querySelector('#pro-reason');

@@ -9,7 +9,7 @@ import { importCsv } from './core/csv-import.js';
 import { exportTransactions, FORMATS } from './core/exporters.js';
 import { parseAmount, round2, formatAmount } from './core/amounts.js';
 import { CONFIG } from './config.js';
-import { getStatus, initProDialog, deactivate } from './pro.js';
+import { getStatus, initProDialog, deactivate, spendOneShot } from './pro.js';
 import { track } from './track.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
@@ -375,12 +375,17 @@ async function onExport() {
   if (state.pro || state.rows.length <= CONFIG.FREE_EXPORT_ROWS) {
     download(format, state.rows);
     track('export_free', { once: true });
+    if (status.oneShot && state.rows.length > CONFIG.FREE_EXPORT_ROWS) {
+      spendOneShot(status);
+      toast('Your single full export is done. Thanks!');
+      refreshPro();
+    }
     return;
   }
   pendingFormat = format;
   track('export_locked');
   $('#free-download').hidden = false;
-  pro.open(`Your file has ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`);
+  pro.open(`Your file has ${state.rows.length} transactions. The free version exports the first ${CONFIG.FREE_EXPORT_ROWS}.`, { one: true });
 }
 
 // ---------------------------------------------------------------- misc UI
