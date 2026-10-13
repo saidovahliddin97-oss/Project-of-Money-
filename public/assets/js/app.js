@@ -2,6 +2,7 @@
 // files are never uploaded anywhere.
 
 import * as pdfjs from '../vendor/pdfjs/pdf.min.mjs';
+import { take } from './handoff.js';
 import { extractLines } from './core/pdf-extract.js';
 import { parseStatement } from './core/statement-parser.js';
 import { importCsv } from './core/csv-import.js';
@@ -468,6 +469,10 @@ function init() {
   refreshPro();
   track('visit_app', { once: true });
   if (location.hash === '#sample') loadSample();
+  if (location.hash === '#handoff') {
+    history.replaceState(null, '', location.pathname);
+    take().then((files) => files.length && addFiles(files));
+  }
 }
 
 async function loadSample() {

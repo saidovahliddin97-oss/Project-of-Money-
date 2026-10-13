@@ -106,6 +106,16 @@ try {
     assert.deepEqual(errors, []);
   });
 
+  await step('statement dropped on the landing page opens parsed in the converter', async () => {
+    await page.goto(BASE + '/');
+    await page.setInputFiles('#home-file', join(fixtures, 'us.pdf'));
+    await page.waitForURL(/\/app/);
+    await page.waitForFunction(() => document.querySelectorAll('#txn-body tr').length === 8, null, { timeout: 15000 });
+    assert.match(await page.locator('.file-meta').first().textContent(), /balances reconcile/);
+    assert.ok(!page.url().includes('#handoff'), 'hash is cleared so a reload does not re-add files');
+    assert.deepEqual(errors, []);
+  });
+
   await step('US PDF parses into 8 reconciled rows', async () => {
     await page.goto(BASE + '/app.html');
     await page.setInputFiles('#file-input', join(fixtures, 'us.pdf'));
