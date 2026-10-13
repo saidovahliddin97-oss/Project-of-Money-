@@ -19,6 +19,19 @@ function run(label, cmd, args, env = {}) {
   return out;
 }
 
+// Several Claude sessions deploy to the same production site. Refuse to ship if any
+// remote branch has commits this checkout lacks — deploying would roll their work back.
+// Override (after merging or on purpose): SHIP_FORCE=1.
+if (!process.env.SHIP_FORCE) {
+  spawnSync('git', ['fetch', '-q', 'origin'], { cwd: root });
+  const heads = spawnSync('git', ['for-each-ref', '--format=%(refname:short)', 'refs/remotes/origin'], { cwd: root, encoding: 'utf8' }).stdout.split('\n').filter((b) => b && !b.endsWith('/HEAD'));
+  const ahead = heads.filter((b) => spawnSync('git', ['merge-base', '--is-ancestor', b, 'HEAD'], { cwd: root }).status === 1);
+  if (ahead.length) {
+    console.log(`✖ not deploying: ${ahead.join(', ')} has commits missing here. Merge first (git merge ${ahead[0]}), or SHIP_FORCE=1.`);
+    process.exit(1);
+  }
+}
+
 // Google Search Console "HTML file" verification: GOOGLE_SITE_VERIFICATION=google1a2b3c.html
 const gsv = String(process.env.GOOGLE_SITE_VERIFICATION || '').trim().split('/').pop();
 if (/^google[0-9a-f]+\.html$/.test(gsv)) writeFileSync(join(root, 'public', gsv), `google-site-verification: ${gsv}`);
