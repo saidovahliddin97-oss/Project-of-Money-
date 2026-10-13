@@ -3,6 +3,7 @@ import { stash } from './handoff.js';
 
 const pro = initProDialog({ onActivated: () => (location.href = '/app.html') });
 document.getElementById('buy-btn')?.addEventListener('click', () => pro.open(''));
+document.getElementById('buy-bundle')?.addEventListener('click', () => pro.open('', { bundle: true }));
 
 // Hero drop zone: keep the files in this browser and open the converter with them.
 const drop = document.getElementById('home-drop');

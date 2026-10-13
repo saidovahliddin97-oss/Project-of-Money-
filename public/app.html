@@ -131,6 +131,11 @@
       <li>Still 100% private: files never leave your device</li>
     </ul>
     <form id="checkout-form" class="stack">
+      <fieldset id="bundle-choice" class="plan-choice" hidden>
+        <legend>Choose</legend>
+        <label class="plan-opt"><input type="radio" name="bundle" value="single" checked><span><strong>LocalLedger Pro</strong> <span data-single-price>$29</span></span></label>
+        <label class="plan-opt"><input type="radio" name="bundle" value="bundle"><span><strong>LocalLedger + IIF Kit</strong> <span data-bundle-price>$49</span> <em class="save">save $9</em><small class="muted">Also turn bank CSVs into .IIF files for QuickBooks Desktop. One key unlocks both.</small></span></label>
+      </fieldset>
       <label>Email for your license key
         <input name="email" type="email" required autocomplete="email" placeholder="you@company.com">
       </label>

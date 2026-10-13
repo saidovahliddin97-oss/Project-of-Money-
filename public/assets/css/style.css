@@ -202,7 +202,7 @@ button.icon:hover { color: var(--fg); border-color: var(--fg-muted); }
 .formats { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
 .formats li { border: 1px solid var(--line); background: var(--glass); padding: 8px 14px; border-radius: var(--radius-pill); font: 500 .85rem/1.2 var(--f-mono); }
 
-.pricing { display: grid; grid-template-columns: repeat(2, minmax(0, 360px)); gap: 20px; justify-content: center; margin-top: 28px; }
+.pricing { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 340px)); gap: 20px; justify-content: center; margin-top: 28px; }
 .price-card { position: relative; background: var(--glass); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 28px; display: flex; flex-direction: column; }
 .price-card.featured { border-color: color-mix(in srgb, var(--aurora-2) 55%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--aurora-2) 25%, transparent), 0 30px 60px -30px color-mix(in srgb, var(--aurora-2) 45%, transparent); }
 .price-card.featured::after { content: "Lifetime"; position: absolute; top: 18px; right: 18px; font: 600 .7rem/1 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--on-lime); background: var(--aurora-2); padding: 6px 10px; border-radius: var(--radius-pill); }
@@ -314,6 +314,13 @@ table.txn tr.needs-review { background: var(--warn-bg); }
 .dialog-x { position: absolute; top: 10px; right: 12px; background: none; border: 0; color: var(--muted); font-size: 1.1rem; cursor: pointer; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .dialog input[type=password] { width: 100%; }
+.plan-choice { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.plan-choice legend { font-weight: 600; margin-bottom: 6px; }
+.plan-opt { display: flex; flex-direction: row; gap: 10px; align-items: flex-start; color: var(--fg); font-size: .95rem; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius-m, 12px); background: var(--glass); cursor: pointer; }
+.plan-opt:has(input:checked) { border-color: var(--aurora-1); background: var(--accent-soft); }
+.plan-opt input { width: auto; min-height: 0; margin: 4px 0 0; padding: 0; flex: none; accent-color: var(--aurora-1); }
+.plan-opt small { display: block; margin-top: 2px; }
+.plan-opt .save { font-style: normal; font-size: .82rem; font-weight: 700; color: var(--good); margin-left: 4px; }
 .checks { list-style: none; padding: 0; margin: 0 0 16px; }
 .checks li { padding-left: 1.6em; position: relative; margin: 4px 0; }
 .checks li::before { content: '✓'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }

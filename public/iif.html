@@ -101,6 +101,7 @@ payroll => Payroll Expenses</textarea>
       <h2 id="pricing">Pricing</h2>
       <p>Preview any file and export up to 15 transactions free. <strong>IIF Kit Pro: $29 one-time</strong> for unlimited exports. 14-day refund if it doesn't work for you.</p>
       <p><button type="button" id="buy-btn" class="btn">Get IIF Kit Pro — $29</button></p>
+      <p data-bundle-only hidden>Also get PDF statements into Excel, QuickBooks Online and Xero: <strong>IIF Kit + LocalLedger — $49 one-time</strong> (save $9), one key for both. <button type="button" id="buy-bundle" class="link">Get both</button></p>
 
       <h2>FAQ</h2>
       <details><summary>Which files work?</summary><p>CSV/TSV exports from online banking (date, description and amount or debit/credit columns are detected automatically) and text-based PDF statements. Scanned PDFs are not supported.</p></details>
@@ -119,6 +120,11 @@ payroll => Payroll Expenses</textarea>
       <li>One-time payment — no subscription</li>
     </ul>
     <form id="checkout-form" class="stack">
+      <fieldset id="bundle-choice" class="plan-choice" hidden>
+        <legend>Choose</legend>
+        <label class="plan-opt"><input type="radio" name="bundle" value="single" checked><span><strong>IIF Kit Pro</strong> <span data-single-price>$29</span></span></label>
+        <label class="plan-opt"><input type="radio" name="bundle" value="bundle"><span><strong>IIF Kit + LocalLedger</strong> <span data-bundle-price>$49</span> <em class="save">save $9</em><small class="muted">Also convert PDF statements to Excel, QuickBooks Online, Xero, QIF and OFX. One key unlocks both.</small></span></label>
+      </fieldset>
       <label>Email for your license key
         <input name="email" type="email" required autocomplete="email" placeholder="you@company.com">
       </label>

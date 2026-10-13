@@ -46,7 +46,7 @@
 - Тексты сайта — EN; кабинет, документы и отчёты — RU.
 
 ## Переменные окружения (значения — только в секретах)
-Сервер (Cloudflare Pages): `LAVA_API_KEY`, `LAVA_WEBHOOK_SECRET`, `LAVA_OFFER_ID`, `LAVA_PRODUCT_NAME`, `LAVA_OFFER_ID_IIF`, `LAVA_PRODUCT_NAME_IIF`, `LAVA_API_BASE` (опц.), `LICENSE_PRIVATE_JWK`, `ADMIN_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (опц., иначе авто), `SITE_URL`, привязка KV `LL_KV`.
+Сервер (Cloudflare Pages): `LAVA_API_KEY`, `LAVA_WEBHOOK_SECRET`, `LAVA_OFFER_ID`, `LAVA_PRODUCT_NAME`, `LAVA_OFFER_ID_IIF`, `LAVA_PRODUCT_NAME_IIF`, `LAVA_OFFER_ID_BUNDLE`, `LAVA_PRODUCT_NAME_BUNDLE` (комплект $49: ключ с планом `bundle` открывает оба продукта; без оффера выбор комплекта скрыт), `LAVA_API_BASE` (опц.), `LICENSE_PRIVATE_JWK`, `ADMIN_TOKEN`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (опц., иначе авто), `SITE_URL`, привязка KV `LL_KV`.
 Скрипты: `GOOGLE_SITE_VERIFICATION` (опц., имя файла `google….html` из Search Console — ship кладёт его в `public/`), `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CF_PAGES_PROJECT` (опц.), `CF_API_BASE` (опц.).
 Планируются: `RESEND_API_KEY`, `CLARITY_PROJECT_ID`.
 Новые переменные среды сессии видны только в новой сессии; после их добавления — `npm run ship`, он синхронизирует секреты в Cloudflare.

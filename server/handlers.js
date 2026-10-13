@@ -66,6 +66,7 @@ async function health(request, env) {
     ok: true,
     checkout: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID),
     checkoutIif: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_IIF),
+    checkoutBundle: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_BUNDLE),
     licensing: Boolean(privateKey(env)),
     webhookAuth: Boolean(env.LAVA_WEBHOOK_SECRET),
     notifications: Boolean(env.TELEGRAM_BOT_TOKEN),
@@ -86,6 +87,8 @@ function products(env) {
   const list = [];
   if (env.LAVA_OFFER_ID) list.push({ key: 'ledger', plan: 'pro', offerId: env.LAVA_OFFER_ID, name: env.LAVA_PRODUCT_NAME || '' });
   if (env.LAVA_OFFER_ID_IIF) list.push({ key: 'iif', plan: 'iif', offerId: env.LAVA_OFFER_ID_IIF, name: env.LAVA_PRODUCT_NAME_IIF || 'IIF Kit Pro' });
+  // Both tools in one purchase; its license (plan 'bundle') unlocks LocalLedger and IIF Kit.
+  if (env.LAVA_OFFER_ID_BUNDLE) list.push({ key: 'bundle', plan: 'bundle', offerId: env.LAVA_OFFER_ID_BUNDLE, name: env.LAVA_PRODUCT_NAME_BUNDLE || 'Aurora Bundle' });
   return list;
 }
 
@@ -346,6 +349,7 @@ async function adminSummary(request, env) {
     config: {
       checkout: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID),
     checkoutIif: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_IIF),
+      checkoutBundle: Boolean(env.LAVA_API_KEY && env.LAVA_OFFER_ID_BUNDLE),
       licensing: Boolean(privateKey(env)),
       webhookAuth: Boolean(env.LAVA_WEBHOOK_SECRET),
       notifications: Boolean(env.TELEGRAM_BOT_TOKEN),
@@ -405,7 +409,9 @@ async function recordSale(env, id, amount, currency, email, product) {
     if (await env.LL_KV.get(`sold:${id}`)) return;
     await env.LL_KV.put(`sold:${id}`, '1');
     const iif = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_IIF || 'IIF Kit Pro');
-    await record(env, [iif ? 'iif_purchase' : 'purchase'], { [iif ? 'gross_iif' : 'gross']: { [currency || 'USD']: amount } });
+    const bundle = Boolean(product) && product === (env.LAVA_PRODUCT_NAME_BUNDLE || 'Aurora Bundle');
+    // A bundle counts as a LocalLedger purchase (money in `gross`) plus its own counter.
+    await record(env, iif ? ['iif_purchase'] : bundle ? ['purchase', 'bundle_purchase'] : ['purchase'], { [iif ? 'gross_iif' : 'gross']: { [currency || 'USD']: amount } });
     await env.LL_KV.put(`sale:${new Date().toISOString()}:${id}`, JSON.stringify({ amount, currency: currency || 'USD', product: product || '', email: maskEmail(email) }));
   } catch {
     /* best-effort */

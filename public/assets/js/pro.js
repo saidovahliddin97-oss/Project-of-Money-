@@ -48,7 +48,9 @@ export function getPublicKey() {
 
 
 // Each product has its own license plan: 'pro' (LocalLedger) or 'iif' (IIF Kit).
+// A 'bundle' key unlocks both and is stored under both products.
 const storageKey = (plan) => (plan === 'iif' ? `${LS_LICENSE}_iif` : LS_LICENSE);
+const covers = (keyPlan, plan) => keyPlan === plan || keyPlan === 'bundle';
 const memory = {};
 
 /** @returns {Promise<{pro: boolean, email?: string}>} */
@@ -56,17 +58,19 @@ export async function getStatus(plan = 'pro') {
   const key = memory[plan] || lsGet(storageKey(plan));
   if (!key) return { pro: false };
   const v = await verifyLicense(key, await getPublicKey());
-  return v.valid && (v.plan || 'pro') === plan ? { pro: true, email: v.email } : { pro: false };
+  return v.valid && covers(v.plan || 'pro', plan) ? { pro: true, email: v.email } : { pro: false };
 }
 
 export async function activate(key, expectedPlan) {
   const v = await verifyLicense(key, await getPublicKey());
   if (!v.valid) return v;
   const plan = v.plan || 'pro';
-  if (expectedPlan && plan !== expectedPlan) return { valid: false, reason: `This key is for ${plan === 'iif' ? 'IIF Kit' : 'LocalLedger'}, not this product.` };
+  if (expectedPlan && !covers(plan, expectedPlan)) return { valid: false, reason: `This key is for ${plan === 'iif' ? 'IIF Kit' : 'LocalLedger'}, not this product.` };
   const clean = key.trim().replace(/\s+/g, '');
-  memory[plan] = clean;
-  lsSet(storageKey(plan), clean);
+  for (const p of plan === 'bundle' ? ['pro', 'iif'] : [plan]) {
+    memory[p] = clean;
+    lsSet(storageKey(p), clean);
+  }
   track('license_activated');
   return v;
 }
@@ -153,11 +157,28 @@ export function initProDialog({ onActivated, product = 'ledger', prices = { USD:
   const actMsg = dlg.querySelector('#activate-msg');
   const priceEl = dlg.querySelector('[data-price]');
   const cur = dlg.querySelector('#checkout-currency');
+  // Optional "both tools" upsell, shown only when the server has a bundle offer.
+  const bundleBox = dlg.querySelector('#bundle-choice');
+  const choice = () => dlg.querySelector('input[name=bundle]:checked')?.value === 'bundle';
+  const bundlePrices = { USD: CONFIG.PRICE_BUNDLE_USD, EUR: CONFIG.PRICE_BUNDLE_EUR };
   const setPrice = () => {
-    if (priceEl) priceEl.textContent = cur && cur.value === 'EUR' ? `€${prices.EUR}` : `$${prices.USD}`;
+    const p = choice() ? bundlePrices : prices;
+    if (priceEl) priceEl.textContent = cur && cur.value === 'EUR' ? `€${p.EUR}` : `$${p.USD}`;
+    dlg.querySelectorAll('[data-single-price]').forEach((el) => (el.textContent = cur && cur.value === 'EUR' ? `€${prices.EUR}` : `$${prices.USD}`));
+    dlg.querySelectorAll('[data-bundle-price]').forEach((el) => (el.textContent = cur && cur.value === 'EUR' ? `€${bundlePrices.EUR}` : `$${bundlePrices.USD}`));
   };
   cur?.addEventListener('change', setPrice);
+  dlg.querySelectorAll('input[name=bundle]').forEach((r) => r.addEventListener('change', setPrice));
   setPrice();
+  if (bundleBox) {
+    fetch('/api/health', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((h) => {
+        bundleBox.hidden = !h.checkoutBundle;
+        document.querySelectorAll('[data-bundle-only]').forEach((el) => (el.hidden = !h.checkoutBundle));
+      })
+      .catch(() => {});
+  }
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -170,7 +191,7 @@ export function initProDialog({ onActivated, product = 'ledger', prices = { USD:
         email: form.email.value,
         currency: cur ? cur.value : 'USD',
         method: form.method ? form.method.value : 'card',
-        product,
+        product: choice() ? 'bundle' : product,
       });
     } catch (ex) {
       err.textContent = ex.message;
@@ -192,7 +213,10 @@ export function initProDialog({ onActivated, product = 'ledger', prices = { USD:
 
   dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
   return {
-    open(reason) {
+    open(reason, { bundle = false } = {}) {
+      const pick = dlg.querySelector(`input[name=bundle][value=${bundle ? 'bundle' : 'single'}]`);
+      if (pick) pick.checked = true;
+      setPrice();
       const r = dlg.querySelector('#pro-reason');
       if (r) r.textContent = reason || '';
       err.textContent = '';

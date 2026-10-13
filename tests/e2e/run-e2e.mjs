@@ -58,8 +58,8 @@ const lava = createServer(async (req, res) => {
     if (!inv) return send(404, { error: 'not found' });
     return send(200, {
       id: m[1], status: inv.status, datetime: new Date().toISOString(),
-      receipt: { amount: 29, currency: inv.body.currency, fee: 2.32 },
-      buyer: { email: inv.body.email }, product: { name: 'LocalLedger Pro', offer: 'Lifetime' },
+      receipt: { amount: inv.body.offerId === 'bundle-offer' ? 49 : 29, currency: inv.body.currency, fee: 2.32 },
+      buyer: { email: inv.body.email }, product: { name: inv.body.offerId === 'bundle-offer' ? 'Aurora Bundle' : 'LocalLedger Pro', offer: 'Lifetime' },
     });
   }
   send(404, { error: 'no route' });
@@ -74,6 +74,7 @@ const app = await startServer({
   env: {
     LAVA_API_KEY: 'test-lava-key', LAVA_OFFER_ID: '836b9fc5-7ae9-4a27-9642-592bc44072b7', LAVA_API_BASE: `http://localhost:${LAVA_PORT}`,
     LICENSE_PRIVATE_JWK: JSON.stringify(privateJwk), SITE_URL: `http://localhost:${APP_PORT}`, LAVA_PRODUCT_NAME: 'LocalLedger Pro', LL_KV: kv,
+    LAVA_OFFER_ID_BUNDLE: 'bundle-offer', LAVA_PRODUCT_NAME_BUNDLE: 'Aurora Bundle',
   },
 });
 const BASE = `http://localhost:${APP_PORT}`;
@@ -293,6 +294,29 @@ try {
     assert.match(iif, /SPL\tDEPOSIT\t1\/5\/2026\tAsk My Accountant\t\t-1200.00/);
     assert.deepEqual(errs, []);
     await p6.close();
+  });
+
+  await step('bundle: one $49 purchase from IIF Kit unlocks both products', async () => {
+    const ctx = await browser.newContext();
+    const pb = await ctx.newPage();
+    const errs = [];
+    pb.on('pageerror', (e) => errs.push(e.message));
+    await pb.goto(BASE + '/iif.html');
+    await pb.locator('#buy-bundle').waitFor({ state: 'visible' });
+    await pb.click('#buy-bundle');
+    await pb.locator('#bundle-choice:not([hidden])').waitFor();
+    assert.equal(await pb.locator('input[name=bundle][value=bundle]').isChecked(), true);
+    assert.equal(await pb.locator('#pro-dialog [data-price]').textContent(), '$49');
+    await pb.fill('#checkout-form input[name=email]', 'both@example.com');
+    await Promise.all([pb.waitForURL('**/success.html', { timeout: 15000 }), pb.click('#checkout-form button[type=submit]')]);
+    await pb.locator('[data-state=done]:not([hidden])').waitFor({ timeout: 15000 });
+    assert.equal([...invoices.values()].at(-1).body.offerId, 'bundle-offer');
+    for (const path of ['/iif.html', '/app.html']) {
+      await pb.goto(BASE + path);
+      await pb.locator('#pro-badge:not([hidden])').waitFor({ timeout: 10000 });
+    }
+    assert.deepEqual(errs, []);
+    await ctx.close();
   });
 
   await step('no browser errors during the run', async () => {

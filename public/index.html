@@ -137,6 +137,17 @@
             </ul>
             <button type="button" class="btn btn-wide" id="buy-btn">Get Pro</button>
           </div>
+          <div class="price-card" data-bundle-only hidden>
+            <h3>Pro + IIF Kit</h3>
+            <div class="price">$49 <small>one-time · save $9</small></div>
+            <ul>
+              <li>Everything in Pro</li>
+              <li>IIF Kit: bank CSV to .IIF for QuickBooks Desktop</li>
+              <li>One key unlocks both tools</li>
+              <li>14-day money-back guarantee</li>
+            </ul>
+            <button type="button" class="btn btn-ghost btn-wide" id="buy-bundle">Get both</button>
+          </div>
         </div>
         <table class="compare">
           <thead><tr><th></th><th>LocalLedger</th><th>Typical cloud converters</th></tr></thead>
@@ -172,6 +183,11 @@
       <li>One-time payment — no subscription</li>
     </ul>
     <form id="checkout-form" class="stack">
+      <fieldset id="bundle-choice" class="plan-choice" hidden>
+        <legend>Choose</legend>
+        <label class="plan-opt"><input type="radio" name="bundle" value="single" checked><span><strong>LocalLedger Pro</strong> <span data-single-price>$29</span></span></label>
+        <label class="plan-opt"><input type="radio" name="bundle" value="bundle"><span><strong>LocalLedger + IIF Kit</strong> <span data-bundle-price>$49</span> <em class="save">save $9</em><small class="muted">Also turn bank CSVs into .IIF files for QuickBooks Desktop. One key unlocks both.</small></span></label>
+      </fieldset>
       <label>Email for your license key
         <input name="email" type="email" required autocomplete="email" placeholder="you@company.com">
       </label>
