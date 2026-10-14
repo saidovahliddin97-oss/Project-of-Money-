@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /success.html
+Disallow: /cancel.html
+Sitemap: https://saidovahliddin97-oss.github.io/Project-of-Money-/sitemap.xml

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Уведомление об открытии счёта за рубежом: срок, данные, напоминание</title>
+  <meta name="description" content="Посчитайте крайний срок уведомления налоговой об открытии, закрытии или изменении реквизитов зарубежного счёта, проверьте список данных и добавьте напоминание в календарь. Бесплатно, без регистрации.">
+  <link rel="canonical" href="https://saidovahliddin97-oss.github.io/Project-of-Money-/uvedomlenie.html">
+  <meta name="robots" content="index">
+  <link rel="icon" href="./assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./assets/css/style.css">
+  <link rel="stylesheet" href="./assets/css/zs.css">
+  <script src="./assets/js/ui.js"></script>
+  <script type="module" src="./assets/js/zs-notice.js"></script>
+</head>
+<body data-product="zs">
+  <header class="site-header">
+    <a class="brand" href="./"><img src="./assets/img/favicon.svg" alt="" width="26" height="26"> Счёт за рубежом</a>
+    <nav><a class="btn btn-small" href="./#tool">Посчитать</a></nav>
+  </header>
+  <main class="container narrow article">
+    <p class="crumbs"><a href="./">Счёт за рубежом</a> › Уведомление</p>
+    <h1>Уведомление об открытии счёта за рубежом</h1>
+    <p class="lead muted">Открыли счёт в зарубежном банке или у брокера? Резидент РФ должен уведомить налоговую <strong>не позднее одного месяца</strong> со дня открытия. То же правило действует при закрытии счёта и изменении его реквизитов. Посчитайте срок и добавьте напоминание.</p>
+
+    <form id="notice-form" class="card stack">
+      <label>Что произошло со счётом
+        <select name="kind">
+          <option value="open">Открыл счёт или вклад</option>
+          <option value="close">Закрыл счёт</option>
+          <option value="change">Изменились реквизиты</option>
+        </select>
+      </label>
+      <label>Дата события
+        <input name="date" type="date" required>
+      </label>
+      <label>Банк или брокер (для напоминания, никуда не отправляется)
+        <input name="bank" placeholder="например, Kaspi Bank" autocomplete="off">
+      </label>
+      <p id="deadline" class="verdict" role="status"></p>
+      <p><button type="button" id="ics" class="btn" disabled>Добавить напоминания в календарь</button></p>
+      <p class="fine">Файл календаря (.ics) создаётся прямо в браузере: напоминание о сроке уведомления, а для открытого счёта ещё и об отчёте о движении средств (до 1 июня следующего года). Подходит для календарей Apple, Google и Outlook.</p>
+    </form>
+
+    <h2>Что подготовить</h2>
+    <ul>
+      <li>ИНН и паспортные данные: личный кабинет налогоплательщика подставит их сам;</li>
+      <li>полное наименование банка или брокера и страну;</li>
+      <li>номер счёта (для мультивалютного — каждый номер, если банк выдал разные);</li>
+      <li>дату открытия, закрытия или изменения реквизитов (по договору или справке банка).</li>
+    </ul>
+    <p class="muted small">Каждый счёт — отдельное уведомление. Форма по КНД 1120107 утверждена приказом ФНС России от 26.04.2024 № СД-7-14/349@.</p>
+
+    <h2>Как подать</h2>
+    <ul>
+      <li>через личный кабинет налогоплательщика на сайте ФНС (нужна электронная подпись, неквалифицированную выдают бесплатно в самом кабинете);</li>
+      <li>лично в инспекции или заказным письмом с уведомлением о вручении.</li>
+    </ul>
+    <p>Источник: <a href="https://www.nalog.gov.ru/rn77/fl/interest/account_opening/" target="_blank" rel="noopener">страница ФНС «Уведомление об открытии счёта в банке за рубежом»</a> (обновлена 18.11.2025).</p>
+
+    <h2>Если пропустить срок</h2>
+    <p>По ч. 2 ст. 15.25 КоАП, по данным открытых обзоров: за неподачу — от 4 000 до 5 000 ₽, за подачу с опозданием — от 1 000 до 1 500 ₽. Суммы перепроверьте по действующей редакции КоАП.</p>
+
+    <h2>Кому не нужно</h2>
+    <p>Не подают налоговые нерезиденты. Физлица, которые провели за границей больше 183 дней в календарном году, освобождены от ряда требований валютного законодательства. Как это применяется к уведомлению в вашем случае, уточните в налоговой: формулировки на сайте ФНС не однозначны.</p>
+
+    <div class="cta-box">
+      <p><strong>Через год понадобится отчёт о движении средств.</strong> Мы посчитаем остатки, зачисления и списания по вашим выпискам в тысячах единиц валюты — как в листе 3 отчёта. Выписки не покидают компьютер.</p>
+      <a class="btn" href="./#tool">Посчитать отчёт по выпискам</a>
+    </div>
+    <p class="muted small">Сервис не даёт налоговых консультаций; ответственность за подачу остаётся за вами.</p>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 Счёт за рубежом</span>
+      <span><a href="./privacy.html">Конфиденциальность</a> · <a href="./terms.html">Условия и возврат</a> · <a href="./unlock.html">Код доступа</a> · <a href="mailto:ahlak2049@gmail.com">Поддержка</a></span>
+    </div>
+  </footer>
+</body>
+</html>

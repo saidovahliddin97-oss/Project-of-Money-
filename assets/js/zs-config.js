@@ -1,0 +1,1 @@
+export const ZS = {"PAY_URL":"https://app.lava.top/products/7aac6d8e-01fd-4169-87c5-e53ebb3cf4c4/44760ff5-f463-43eb-95ee-d7284b579ae5?currency=RUB","UNLOCK_SHA256":"a4de3dc0f8d020447aefe48e456a97185a7ace8c567e3b3a18b6eab76d8ef9b2"};
