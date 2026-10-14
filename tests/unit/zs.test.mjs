@@ -43,3 +43,19 @@ test('currency codes follow OKV', () => {
   assert.equal(OKV.KZT, '398');
   assert.equal(OKV.AMD, '051');
 });
+
+import { noticeDeadline, icsCalendar } from '../../sites/zs/assets/js/zs-calc.js';
+
+test('notice deadline is one month after the date (end of month clamps)', () => {
+  assert.equal(noticeDeadline('2026-10-14'), '2026-11-14');
+  assert.equal(noticeDeadline('2026-01-31'), '2026-02-28');
+  assert.equal(noticeDeadline('2026-12-20'), '2027-01-20');
+});
+
+test('ics calendar has one VEVENT per reminder with an alarm', () => {
+  const ics = icsCalendar([{ date: '2026-11-14', title: 'Уведомление, счёт; банк' }, { date: '2027-05-15', title: 'ОДДС' }]);
+  assert.equal(ics.match(/BEGIN:VEVENT/g).length, 2);
+  assert.match(ics, /DTSTART;VALUE=DATE:20261114/);
+  assert.ok(ics.includes('SUMMARY:Уведомление\\, счёт\\; банк'));
+  assert.match(ics, /TRIGGER:-P3D/);
+});

@@ -51,3 +51,24 @@ export function thresholdVerdict(a, rate, zone) {
   return { need: true, reason: 'Обороты и остаток больше 600 000 ₽ — отчёт нужен.' };
 }
 
+
+/** Крайний срок уведомления: «не позднее одного месяца» со дня открытия/закрытия/изменения реквизитов. */
+export function noticeDeadline(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); // дней в следующем месяце
+  const dt = new Date(Date.UTC(y, m, Math.min(d, last)));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Календарь .ics (RFC 5545) — без сервера, файл собирается в браузере. */
+export function icsCalendar(events, stamp = '20260101T000000Z') {
+  const esc = (s) => String(s).replace(/[\\,;]/g, (c) => `\\${c}`).replace(/\n/g, '\\n');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//schet-za-rubezhom//RU', 'CALSCALE:GREGORIAN'];
+  events.forEach((e, i) => {
+    const day = e.date.replace(/-/g, '');
+    lines.push('BEGIN:VEVENT', `UID:${day}-${i}@schet-za-rubezhom`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${day}`, `SUMMARY:${esc(e.title)}`, `DESCRIPTION:${esc(e.note || '')}`,
+      'BEGIN:VALARM', 'TRIGGER:-P3D', 'ACTION:DISPLAY', `DESCRIPTION:${esc(e.title)}`, 'END:VALARM', 'END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n') + '\r\n';
+}
