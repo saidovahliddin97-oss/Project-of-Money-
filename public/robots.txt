@@ -4,4 +4,4 @@ Disallow: /setup.html
 Disallow: /admin.html
 Disallow: /success.html
 Disallow: /cancel.html
-Sitemap: https://localledger-40f.pages.dev/sitemap.xml
+Sitemap: https://localledger.pages.dev/sitemap.xml

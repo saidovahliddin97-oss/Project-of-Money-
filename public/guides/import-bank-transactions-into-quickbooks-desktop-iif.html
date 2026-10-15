@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Import bank transactions into QuickBooks Desktop with an IIF file | LocalLedger</title>
+  <meta name="description" content="How to get bank or credit card transactions from a CSV or PDF statement into QuickBooks Desktop using an IIF import, with a safe test-first checklist.">
+  <link rel="canonical" href="https://localledger.pages.dev/guides/import-bank-transactions-into-quickbooks-desktop-iif.html">
+  <link rel="icon" href="/assets/img/favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Import bank transactions into QuickBooks Desktop with an IIF file | LocalLedger">
+  <meta property="og:description" content="How to get bank or credit card transactions from a CSV or PDF statement into QuickBooks Desktop using an IIF import, with a safe test-first checklist.">
+  <meta property="og:image" content="https://localledger.pages.dev/assets/img/og.png">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <script src="/assets/js/ui.js"></script>
+  <script src="/assets/js/pv.js" defer></script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"Import bank transactions into QuickBooks Desktop with an IIF file","description":"How to get bank or credit card transactions from a CSV or PDF statement into QuickBooks Desktop using an IIF import, with a safe test-first checklist.","dateModified":"2026-10-10","author":{"@type":"Organization","name":"LocalLedger"}}</script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/"><img src="/assets/img/logo.svg" alt="" width="28" height="28"> LocalLedger</a>
+    <nav>
+      <a href="/guides/">Guides</a>
+      <a href="/banks/">Banks</a>
+      <a href="/#pricing">Pricing</a>
+      <a class="btn btn-small" href="/app.html">Open converter</a>
+    </nav>
+  </header>
+  <main class="container narrow article">
+    <p class="crumbs"><a href="/">Home</a> › <a href="/guides/">Guides</a></p>
+    <h1>Import bank transactions into QuickBooks Desktop with an IIF file</h1>
+    <p class="muted">Updated 2026-10-10</p>
+
+<p>QuickBooks Desktop (Pro, Premier, Enterprise) does not have a simple "import this bank CSV" command the way a spreadsheet does. The usual supported route is a bank connection or a Web Connect (.QBO) file from your bank. When neither is available, or a feed is broken, many bookkeepers fall back to an <strong>IIF file</strong>: a tab-separated text file that QuickBooks Desktop can import through <em>File → Utilities → Import → IIF Files</em>. Intuit does not officially support creating IIF files by hand, so treat the import as something you test first.</p>
+<h2>What an IIF file contains</h2>
+<p>An IIF file is plain text with header rows that start with <code>!</code>, followed by data rows. A bank transaction is written as one <code>TRNS</code> line (the bank account side) and one or more <code>SPL</code> lines (the account it is categorized to), closed by <code>ENDTRNS</code>. The <code>SPL</code> amounts must add up to the negative of the <code>TRNS</code> amount, or QuickBooks rejects the transaction.</p>
+<pre>!TRNS	TRNSTYPE	DATE	ACCNT	NAME	AMOUNT	MEMO
+!SPL	TRNSTYPE	DATE	ACCNT	NAME	AMOUNT	MEMO
+!ENDTRNS
+TRNS	CHECK	01/05/2026	Checking	Shell	-45.00	SHELL OIL 1234
+SPL	CHECK	01/05/2026	Automobile:Fuel	Shell	45.00	SHELL OIL 1234
+ENDTRNS</pre>
+<h2>Step by step</h2>
+<ol>
+  <li><strong>Get the transactions out of the bank.</strong> Download the CSV export, or keep the PDF statement if the bank offers nothing else. Text-based PDFs work; scanned images do not.</li>
+  <li><strong>Open <a href="/iif">IIF Kit</a> in your browser</strong> and drop the file in. The processing happens on your computer; the statement is not uploaded.</li>
+  <li><strong>Check the preview.</strong> Confirm the first and last dates, the sign of the amounts (money out negative), and that the row count matches the statement. If the day and month look swapped, change the date order before exporting.</li>
+  <li><strong>Map the accounts with rules.</strong> Write one rule per line in the form <code>keyword =&gt; Account</code>, for example <code>shell =&gt; Automobile:Fuel</code> or <code>payroll =&gt; Payroll Expenses</code>. Rows that match a rule get that account; you can edit any remaining row by hand.</li>
+  <li><strong>Download the .IIF file.</strong></li>
+  <li><strong>Back up your company file</strong> in QuickBooks before importing anything.</li>
+  <li><strong>Import.</strong> In QuickBooks Desktop choose <em>File → Utilities → Import → IIF Files</em> and select the file.</li>
+</ol>
+<h2>Test before you trust it</h2>
+<ul>
+  <li><strong>Account names must match your chart of accounts exactly,</strong> including sub-account paths such as <code>Automobile:Fuel</code>. A typo can create an unwanted account or fail the row. Compare your rule names with the chart of accounts first.</li>
+  <li><strong>Start with a handful of rows</strong> in a test company file, then look at the register. Only then import a full month into the live file.</li>
+  <li><strong>Reconcile afterward.</strong> The register balance after import should agree with the statement's closing balance. See <a href="/guides/check-converted-bank-transactions.html">how to check converted transactions</a>.</li>
+  <li><strong>Avoid duplicates.</strong> If part of the period was already entered or came through a bank feed, remove those rows from the CSV before converting. Importing the same file twice enters everything twice.</li>
+</ul>
+<h2>Bank accounts versus credit cards</h2>
+<p>For a bank account, withdrawals are naturally written as checks and deposits as deposits. For a credit card account, IIF Kit writes journal entries instead, so the card account and the expense accounts both move correctly.</p>
+<h2>Limits to know about</h2>
+<ul>
+  <li>IIF Kit handles bank and card transactions. It does not import invoices, bills or lists such as customers and items.</li>
+  <li>Scanned (image-only) PDF statements are not supported.</li>
+  <li>QuickBooks Online does not use IIF. For Online, convert to a bank-upload format instead: see <a href="/guides/import-bank-statement-into-quickbooks-online.html">importing a statement into QuickBooks Online</a>.</li>
+  <li>The free preview exports up to 15 rows; the full version is a one-time purchase.</li>
+</ul>
+<p>If you only need a clean CSV to review or send to a client, <a href="/guides/convert-pdf-bank-statement-to-csv.html">converting a PDF statement to CSV</a> is the first step, and IIF Kit then turns that CSV into the .IIF file.</p>
+
+<div class="cta-box">
+  <p><strong>Try it with your own statement.</strong> LocalLedger reads the PDF or CSV in your browser, shows every transaction for review and checks the totals against the statement balances.</p>
+  <a class="btn" href="/app.html">Convert your statement now — free preview, nothing uploaded</a>
+</div>
+<h2>Related guides</h2>
+<ul>
+  <li><a href="/guides/convert-pdf-bank-statement-to-excel.html">How to convert a PDF bank statement to Excel (without retyping)</a></li>
+  <li><a href="/guides/import-bank-statement-into-quickbooks-online.html">How to import a bank statement into QuickBooks Online (CSV, step by step)</a></li>
+  <li><a href="/guides/import-bank-statement-into-xero.html">How to import a bank statement into Xero from a PDF or CSV</a></li>
+  <li><a href="/guides/convert-csv-to-qif.html">Convert CSV to QIF for Quicken, GnuCash, Moneydance and other finance apps</a></li>
+</ul>
+  </main>
+  <footer class="site-footer">
+    <div class="container">
+      <span>© 2026 LocalLedger</span>
+      <span><a href="/guides/">Guides</a> · <a href="/banks/">Banks</a> · <a href="/iif">IIF Kit for QuickBooks Desktop</a> · <a href="/privacy.html">Privacy</a> · <a href="/terms.html">Terms &amp; refunds</a> · <a href="/success.html">Retrieve license</a> · <a href="mailto:ahlak2049@gmail.com">Support</a></span>
+    </div>
+  </footer>
+</body>
+</html>

@@ -265,6 +265,49 @@ ${cta('Convert locally — nothing is uploaded')}`,
 <p>Because conversion happens locally, nothing leaves your computer, but the CSV still contains your transactions. Store it like the original statement and delete copies you no longer need.</p>
 ${cta()}`,
   },
+  {
+    slug: 'import-bank-transactions-into-quickbooks-desktop-iif',
+    title: 'Import bank transactions into QuickBooks Desktop with an IIF file',
+    description: 'How to get bank or credit card transactions from a CSV or PDF statement into QuickBooks Desktop using an IIF import, with a safe test-first checklist.',
+    body: `
+<p>QuickBooks Desktop (Pro, Premier, Enterprise) does not have a simple "import this bank CSV" command the way a spreadsheet does. The usual supported route is a bank connection or a Web Connect (.QBO) file from your bank. When neither is available, or a feed is broken, many bookkeepers fall back to an <strong>IIF file</strong>: a tab-separated text file that QuickBooks Desktop can import through <em>File → Utilities → Import → IIF Files</em>. Intuit does not officially support creating IIF files by hand, so treat the import as something you test first.</p>
+<h2>What an IIF file contains</h2>
+<p>An IIF file is plain text with header rows that start with <code>!</code>, followed by data rows. A bank transaction is written as one <code>TRNS</code> line (the bank account side) and one or more <code>SPL</code> lines (the account it is categorized to), closed by <code>ENDTRNS</code>. The <code>SPL</code> amounts must add up to the negative of the <code>TRNS</code> amount, or QuickBooks rejects the transaction.</p>
+<pre>!TRNS	TRNSTYPE	DATE	ACCNT	NAME	AMOUNT	MEMO
+!SPL	TRNSTYPE	DATE	ACCNT	NAME	AMOUNT	MEMO
+!ENDTRNS
+TRNS	CHECK	01/05/2026	Checking	Shell	-45.00	SHELL OIL 1234
+SPL	CHECK	01/05/2026	Automobile:Fuel	Shell	45.00	SHELL OIL 1234
+ENDTRNS</pre>
+<h2>Step by step</h2>
+<ol>
+  <li><strong>Get the transactions out of the bank.</strong> Download the CSV export, or keep the PDF statement if the bank offers nothing else. Text-based PDFs work; scanned images do not.</li>
+  <li><strong>Open <a href="/iif">IIF Kit</a> in your browser</strong> and drop the file in. The processing happens on your computer; the statement is not uploaded.</li>
+  <li><strong>Check the preview.</strong> Confirm the first and last dates, the sign of the amounts (money out negative), and that the row count matches the statement. If the day and month look swapped, change the date order before exporting.</li>
+  <li><strong>Map the accounts with rules.</strong> Write one rule per line in the form <code>keyword =&gt; Account</code>, for example <code>shell =&gt; Automobile:Fuel</code> or <code>payroll =&gt; Payroll Expenses</code>. Rows that match a rule get that account; you can edit any remaining row by hand.</li>
+  <li><strong>Download the .IIF file.</strong></li>
+  <li><strong>Back up your company file</strong> in QuickBooks before importing anything.</li>
+  <li><strong>Import.</strong> In QuickBooks Desktop choose <em>File → Utilities → Import → IIF Files</em> and select the file.</li>
+</ol>
+<h2>Test before you trust it</h2>
+<ul>
+  <li><strong>Account names must match your chart of accounts exactly,</strong> including sub-account paths such as <code>Automobile:Fuel</code>. A typo can create an unwanted account or fail the row. Compare your rule names with the chart of accounts first.</li>
+  <li><strong>Start with a handful of rows</strong> in a test company file, then look at the register. Only then import a full month into the live file.</li>
+  <li><strong>Reconcile afterward.</strong> The register balance after import should agree with the statement's closing balance. See <a href="/guides/check-converted-bank-transactions.html">how to check converted transactions</a>.</li>
+  <li><strong>Avoid duplicates.</strong> If part of the period was already entered or came through a bank feed, remove those rows from the CSV before converting. Importing the same file twice enters everything twice.</li>
+</ul>
+<h2>Bank accounts versus credit cards</h2>
+<p>For a bank account, withdrawals are naturally written as checks and deposits as deposits. For a credit card account, IIF Kit writes journal entries instead, so the card account and the expense accounts both move correctly.</p>
+<h2>Limits to know about</h2>
+<ul>
+  <li>IIF Kit handles bank and card transactions. It does not import invoices, bills or lists such as customers and items.</li>
+  <li>Scanned (image-only) PDF statements are not supported.</li>
+  <li>QuickBooks Online does not use IIF. For Online, convert to a bank-upload format instead: see <a href="/guides/import-bank-statement-into-quickbooks-online.html">importing a statement into QuickBooks Online</a>.</li>
+  <li>The free preview exports up to 15 rows; the full version is a one-time purchase.</li>
+</ul>
+<p>If you only need a clean CSV to review or send to a client, <a href="/guides/convert-pdf-bank-statement-to-csv.html">converting a PDF statement to CSV</a> is the first step, and IIF Kit then turns that CSV into the .IIF file.</p>
+${cta()}`,
+  },
 ];
 
 

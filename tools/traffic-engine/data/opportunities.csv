@@ -54,3 +54,4 @@ hackernews,https://news.ycombinator.com/item?id=44689842,bank statement pdf to e
 2. For older months that only exist as PDFs, use a converter that reads the table layout rather than copy-paste (copy-paste breaks wrapped descriptions and debit/credit columns).
 3. Aim for .xlsx or CSV; keep one consistent date format and money-out as negative amounts.
 4. Before importing, reconcile: opening balance + all transactions should equal the closing balance on the statement. If it is off by exactly twice one amount, a sign got flipped.",template,needs_human_review,
+hackernews,https://news.ycombinator.com/item?id=50080975,extract transactions from pdf,"Show HN: Pulse Local, a Mac budgeting app whose AI models run on your machine",2026-10-15T06:57:41.406Z,2026-10-14T00:43:22Z,0.61,,none,competitor_intel,
