@@ -2,7 +2,7 @@
 // how long they've been working, and occasionally produces a short line —
 // a break reminder, a check-in, or a hello after a long silence.
 
-import { createMessage, DEFAULT_MODEL } from './claude.mjs';
+import { chat } from './llm.mjs';
 
 const MIN = 60 * 1000;
 
@@ -65,13 +65,10 @@ export class Proactive {
       ? `Пользователь непрерывно работает примерно ${minutes} минут. Напомни ему мягко сделать паузу.`
       : 'Пользователь давно ничего не писал, но он за компьютером. Ненавязчиво предложи помощь.';
     try {
-      const msg = await createMessage({
-        model: DEFAULT_MODEL,
-        max_tokens: 120,
+      const text = await chat([{ role: 'user', content: prompt }], {
         system: 'Ты — Эдит, персональный ИИ-ассистент в стиле Джарвиса. Обращайся к пользователю «босс». Отвечай ОДНОЙ короткой фразой на русском, спокойно и по делу, без эмодзи.',
-        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 120,
       });
-      const text = (msg.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
       return text || pick(FALLBACKS[reason]);
     } catch {
       return pick(FALLBACKS[reason]); // offline / no key — still speak

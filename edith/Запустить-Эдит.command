@@ -16,28 +16,44 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-# 2) Есть ли ключ (edith/.env)?
+# 2) Настройки есть? (без .env используется Ollama по умолчанию)
 if [ ! -f edith/.env ]; then
   cp edith/.env.example edith/.env
   echo
-  echo "Создан файл edith/.env — впишите в него ваш ключ Claude (ANTHROPIC_API_KEY),"
-  echo "сохраните и снова откройте этот файл."
-  open -e edith/.env 2>/dev/null || true
-  echo
-  read -n 1 -s -r -p "Нажмите любую клавишу, чтобы закрыть…"
-  exit 1
+  echo "Создан edith/.env с настройками по умолчанию (бесплатный мозг — Ollama)."
+  echo "Если захотите облачный вариант (Groq/Gemini) — впишите ключ в этот файл."
 fi
 
-# 3) Порт (по умолчанию 4330)
-PORT=$(grep -E '^EDITH_PORT=' edith/.env | cut -d= -f2)
+# 3) Провайдер
+PROVIDER=$(grep -E '^EDITH_PROVIDER=' edith/.env | tail -1 | cut -d= -f2 | tr -d ' ')
+PROVIDER=${PROVIDER:-ollama}
+PORT=$(grep -E '^EDITH_PORT=' edith/.env | tail -1 | cut -d= -f2 | tr -d ' ')
 PORT=${PORT:-4330}
+MODEL=$(grep -E '^EDITH_MODEL=' edith/.env | tail -1 | cut -d= -f2 | tr -d ' ')
+MODEL=${MODEL:-llama3.1}
 
-# 4) Открыть браузер чуть позже, когда сервер поднимется
+# 4) Для Ollama — проверить, что он установлен и модель скачана
+if [ "$PROVIDER" = "ollama" ]; then
+  if ! command -v ollama >/dev/null 2>&1; then
+    echo
+    echo "Выбран бесплатный локальный мозг Ollama, но он не установлен."
+    echo "Установите один раз с https://ollama.com (обычное приложение),"
+    echo "затем снова откройте этот файл — остальное произойдёт само."
+    echo
+    read -n 1 -s -r -p "Нажмите любую клавишу, чтобы закрыть…"
+    exit 1
+  fi
+  if ! ollama list 2>/dev/null | grep -q "$MODEL"; then
+    echo "Скачиваю модель $MODEL (один раз, несколько ГБ)…"
+    ollama pull "$MODEL"
+  fi
+fi
+
+# 5) Открыть браузер, когда сервер поднимется
 ( sleep 2; open "http://localhost:${PORT}" ) &
 
 echo "Запускаю… Эдит откроется в браузере на http://localhost:${PORT}"
 echo "Чтобы остановить — закройте это окно."
 echo
 
-# 5) Старт сервера (ключ подхватывается из edith/.env)
 exec node --env-file=edith/.env edith/server.mjs
