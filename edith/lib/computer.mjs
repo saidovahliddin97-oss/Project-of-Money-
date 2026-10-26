@@ -122,6 +122,18 @@ export async function runAction(action) {
   }
 }
 
+// Speak text with the Mac's own TTS (`say`), using the system default voice or
+// EDITH_SAY_VOICE. This is the highest-quality local voice (your chosen
+// system/enhanced voice), unlike the browser's built-in voices.
+export async function sayText(text) {
+  if (os.platform() !== 'darwin') return; // only on macOS
+  const clean = (text || '').replace(/[`$"\\]/g, ' ').trim();
+  if (!clean) return;
+  const voice = process.env.EDITH_SAY_VOICE;
+  const vArg = voice ? `-v ${q(voice)} ` : '';
+  await execp(`say ${vArg}-r ${Number(process.env.EDITH_SAY_RATE) || 185} ${q(clean)}`, { timeout: 60000 });
+}
+
 // Capture the screen as a small JPEG (long edge 1568 px, quality 60) so only a
 // few hundred KB go to the vision model. Needs the "Screen Recording"
 // permission for Terminal/node in macOS settings.

@@ -16,7 +16,7 @@ const opts = loadOpts();
 
 // ---------- settings persistence ----------
 function loadOpts() {
-  const def = { wake: true, speak: true, proactive: true, eco: true, eyes: true, voiceURI: '' };
+  const def = { wake: false, speak: true, saymac: true, proactive: true, eco: true, eyes: true, voiceURI: '' };
   try { return { ...def, ...JSON.parse(localStorage.getItem('edith-opts') || '{}') }; } catch { return def; }
 }
 function saveOpts() { try { localStorage.setItem('edith-opts', JSON.stringify(opts)); } catch {} }
@@ -113,51 +113,74 @@ async function send(text) {
 }
 composer.addEventListener('submit', (e) => { e.preventDefault(); send(input.value); });
 
-// ---------- voice output (female, Jarvis-like) ----------
-let voices = [], chosenVoice = null;
-const FEMALE_RU = /(Milena|Katya|Katerina|Alena|Yuliya|Polina|Google русский|Russian Female|Женск)/i;
-const FEMALE_ANY = /(female|woman|Samantha|Karen|Moira|Tessa|Fiona|Serena|Victoria|Zira|Jenny|Aria)/i;
+// ---------- voice output ----------
+// Two paths: the Mac's own voice via `say` on the server (best quality, uses
+// your system/Siri voice) or the browser's built-in voices.
+let voices = [], chosenVoice = null, speaking = false;
+const FEMALE_RU = /(Milena|Katya|Katerina|Alena|Yuliya|Polina|Google русский|Russian Female|Женск|Siri)/i;
+const FEMALE_ANY = /(female|woman|Samantha|Karen|Moira|Tessa|Serena|Victoria|Zira|Jenny|Aria|Siri)/i;
 function loadVoices() {
+  if (!('speechSynthesis' in window)) return;
   voices = speechSynthesis.getVoices();
-  const sel = $('#voice-select'); if (sel) {
+  const sel = $('#voice-select');
+  if (sel) {
     sel.innerHTML = '';
-    const ru = voices.filter((v) => /ru/i.test(v.lang));
-    const rest = voices.filter((v) => !/ru/i.test(v.lang));
+    const ru = voices.filter((v) => /ru/i.test(v.lang)), rest = voices.filter((v) => !/ru/i.test(v.lang));
     for (const v of [...ru, ...rest]) { const o = document.createElement('option'); o.value = v.voiceURI; o.textContent = `${v.name} (${v.lang})`; sel.appendChild(o); }
   }
   chosenVoice = voices.find((v) => v.voiceURI === opts.voiceURI)
     || voices.find((v) => /ru/i.test(v.lang) && FEMALE_RU.test(v.name))
     || voices.find((v) => /ru/i.test(v.lang))
     || voices.find((v) => FEMALE_ANY.test(v.name)) || voices[0] || null;
-  if ($('#voice-select') && chosenVoice) $('#voice-select').value = chosenVoice.voiceURI;
+  if (sel && chosenVoice) sel.value = chosenVoice.voiceURI;
   const note = $('#voice-note');
-  if (note) note.textContent = chosenVoice ? `Выбран: ${chosenVoice.name}. Самый естественный женский русский голос — «Milena» или «Google русский». Если их нет в списке, установите macOS‑голос: Системные настройки → Универсальный доступ → Проговаривание → Системный голос → Милена (Улучшенный).` : 'Голоса не найдены.';
+  if (note) note.textContent = 'Лучший вариант — «голос Mac» выше: он берёт ваш системный голос Mac (в т.ч. Siri/Улучшенный). Выбрать его: Системные настройки → Универсальный доступ → Устная речь → Системный голос. Список ниже — это запасные голоса браузера.';
 }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
-let speaking = false;
+
 function speak(text) {
-  if (!opts.speak || !('speechSynthesis' in window) || !text) return;
+  if (!opts.speak || !text) return;
+  if (opts.saymac) { speakViaMac(text); return; }
+  if (!('speechSynthesis' in window)) return;
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text.replace(/\s+/g, ' ').slice(0, 700));
-    u.lang = 'ru-RU'; if (chosenVoice) u.voice = chosenVoice;
-    u.rate = 1.0; u.pitch = 1.08; // спокойно, чуть выше — женственнее
-    u.onstart = () => { speaking = true; pauseMicWhileSpeaking(true); };
-    u.onend = () => { speaking = false; pauseMicWhileSpeaking(false); };
+    u.lang = 'ru-RU'; if (chosenVoice) u.voice = chosenVoice; u.rate = 1.0; u.pitch = 1.05;
+    u.onstart = () => { speaking = true; micPause(true); };
+    u.onend = () => { speaking = false; micPause(false); };
     speechSynthesis.speak(u);
   } catch {}
 }
+async function speakViaMac(text) {
+  try {
+    speaking = true; micPause(true);
+    await fetch('/api/say', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 700) }) });
+  } catch {}
+  finally { speaking = false; micPause(false); }
+}
 
-// ---------- voice input: hands-free, wake word "Эдит", always listening ----------
+// ---------- voice input ----------
+// Browsers block the microphone until the user interacts with the page at least
+// once, so the mic turns on with a tap. After that, hands-free mode (wake word
+// "Эдит") keeps listening on its own.
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, wantListening = false, awake = false, awakeTimer = null, finalBuf = '';
-const WAKE = /\b(эдит|edith|едит|эдис|идти|эдди)\b/i;
+const micBtn = $('#mic'), micText = $('#mic-text');
+let rec = null, mode = 'off';          // 'off' | 'ptt' (tap-to-talk) | 'wake' (hands-free)
+let listening = false, awake = false, finalBuf = '', awakeTimer = null, commitTimer = null;
+const WAKE = /(эдит|edith|едит|эдис|эдди|едить)/i;
 
-function micState(cls, label) { statMic.className = 'stat ' + cls; statMic.querySelector('span').textContent = label; }
+function micUI(state, label) { // state: off | on | rec
+  micBtn.className = 'mic-big' + (state === 'rec' ? ' rec' : state === 'on' ? ' on' : '');
+  if (label) micText.textContent = label;
+  statMic.className = 'stat ' + (state === 'rec' ? 'live' : state === 'on' ? 'on' : '');
+  statMic.querySelector('span').textContent = state === 'off' ? 'микрофон' : (state === 'rec' ? 'слушаю' : 'готов');
+}
 
-if (SR) {
-  rec = new SR(); rec.lang = 'ru-RU'; rec.continuous = true; rec.interimResults = true;
-  rec.onstart = () => micState('live', awake ? 'слушаю' : 'фон');
+if (!SR) { micUI('off', 'голос не работает (нужен Chrome)'); micBtn.disabled = true; }
+else {
+  rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true;
+  rec.continuous = true;
+  rec.onstart = () => { listening = true; micUI(mode === 'ptt' || awake ? 'rec' : 'on', mode === 'wake' && !awake ? 'слушаю фоном — скажите «Эдит»' : 'говорите…'); };
   rec.onresult = (e) => {
     let interim = '';
     for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -166,49 +189,71 @@ if (SR) {
     }
     if (interim) {
       youEl.classList.add('active');
-      youEl.textContent = awake ? interim : (WAKE.test(interim) ? '…' : interim);
-      if (!awake && WAKE.test(interim)) wake();
+      if (mode === 'ptt' || awake) { youEl.textContent = interim; setState('listening', 'слушаю, босс'); }
+      else if (WAKE.test(interim)) { wake(); }
     }
   };
   rec.onerror = (e) => {
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-      wantListening = false; micState('warn', 'нет доступа');
-      showBanner('Нет доступа к микрофону. Нажмите «замок» слева от адреса в Chrome → Микрофон → Разрешить, затем перезагрузите страницу.', 'обновить', () => location.reload());
-    } else if (e.error === 'no-speech' || e.error === 'aborted') { /* normal; onend restarts */ }
+      mode = 'off'; listening = false; micUI('off', 'нет доступа к микрофону');
+      showBanner('Нет доступа к микрофону. В Chrome нажмите значок замка слева от адреса → Микрофон → Разрешить, затем обновите страницу.', 'обновить', () => location.reload());
+    }
   };
-  rec.onend = () => { if (wantListening && !speaking) { try { rec.start(); } catch {} } else micState('', 'пауза'); };
-} else {
-  micState('warn', 'нет голоса');
+  rec.onend = () => {
+    listening = false;
+    // hands-free: keep it alive; tap-to-talk: stop after the utterance
+    if (mode === 'wake' && !speaking) { try { rec.start(); } catch {} }
+    else if (mode === 'ptt') { /* one utterance done */ if (!busy) micUI('off', 'нажмите, чтобы говорить'); }
+  };
 }
 
-function startListening() {
+function startRec() { if (rec && !listening) { try { rec.start(); } catch {} } }
+function micPause(on) { // don't let Эдит hear herself
   if (!rec) return;
-  wantListening = true;
-  navigator.mediaDevices?.getUserMedia({ audio: true })
-    .then(() => { try { rec.start(); } catch {} })
-    .catch(() => { micState('warn', 'нет доступа'); showBanner('Разрешите доступ к микрофону в Chrome (замок у адреса → Микрофон → Разрешить), затем обновите.', 'обновить', () => location.reload()); });
-}
-function stopListening() { wantListening = false; try { rec && rec.stop(); } catch {} micState('', 'выкл'); }
-function pauseMicWhileSpeaking(on) { // avoid Эдит hearing herself
-  if (!rec || !wantListening) return;
-  try { if (on) rec.stop(); else setTimeout(() => { if (wantListening) { try { rec.start(); } catch {} } }, 250); } catch {}
+  if (on) { try { rec.stop(); } catch {} }
+  else if (mode === 'wake') setTimeout(() => startRec(), 300);
 }
 function wake() {
-  awake = true; micState('live', 'слушаю'); finalBuf = '';
-  setState('listening', 'слушаю, босс'); youEl.textContent = '';
-  clearTimeout(awakeTimer); awakeTimer = setTimeout(() => { awake = false; micState('live', 'фон'); if (!busy) setState('idle', 'в режиме ожидания'); }, 8000);
+  awake = true; finalBuf = ''; micUI('rec', 'слушаю, босс'); setState('listening', 'слушаю, босс'); youEl.textContent = '';
+  clearTimeout(awakeTimer); awakeTimer = setTimeout(() => { awake = false; if (!busy) { setState('idle', 'в режиме ожидания'); micUI('on', 'скажите «Эдит»'); } }, 9000);
 }
 function handleFinal(text) {
   const clean = text.trim(); if (!clean) return;
-  if (!awake) { if (WAKE.test(clean)) { wake(); const after = clean.replace(WAKE, '').trim(); if (after.length > 1) { finalBuf = after; commitSoon(); } } return; }
+  if (mode === 'wake' && !awake) {
+    if (WAKE.test(clean)) { wake(); const after = clean.replace(WAKE, '').replace(/^[,.\s]+/, '').trim(); if (after.length > 1) { finalBuf = after; commitSoon(); } }
+    return;
+  }
+  // ptt, or awake
   finalBuf = (finalBuf ? finalBuf + ' ' : '') + clean.replace(WAKE, '').trim();
+  youEl.textContent = finalBuf;
   commitSoon();
 }
-let commitTimer = null;
 function commitSoon() {
   clearTimeout(awakeTimer); clearTimeout(commitTimer);
-  youEl.textContent = finalBuf;
-  commitTimer = setTimeout(() => { const t = finalBuf.trim(); finalBuf = ''; awake = false; micState('live', 'фон'); if (t.length > 1) send(t); }, 1200);
+  commitTimer = setTimeout(() => {
+    const t = finalBuf.trim(); finalBuf = ''; awake = false;
+    if (mode === 'ptt') { mode = 'off'; try { rec.stop(); } catch {} }
+    if (t.length > 1) send(t);
+  }, 1100);
+}
+
+// tap the mic: start tap-to-talk right now (works on the very first tap)
+micBtn.addEventListener('click', () => {
+  if (!rec) return;
+  if (listening) { // stop / cancel
+    mode = 'off'; try { rec.stop(); } catch {} micUI('off', 'нажмите, чтобы говорить'); return;
+  }
+  mode = opts.wake ? 'wake' : 'ptt';
+  awake = mode === 'ptt'; // tap-to-talk is immediately active, no wake word needed
+  finalBuf = '';
+  startRec();
+});
+
+// hands-free toggle: enable continuous wake-word listening (still needs one
+// tap on the mic or this toggle as the first user gesture)
+function setWakeMode(on) {
+  if (on) { mode = 'wake'; awake = false; startRec(); micUI('on', 'скажите «Эдит»'); }
+  else { mode = 'off'; try { rec && rec.stop(); } catch {} micUI('off', 'нажмите, чтобы говорить'); }
 }
 
 // ---------- in-HUD windows ----------
@@ -260,8 +305,9 @@ $('#btn-log').onclick = () => $('#drawer').classList.add('open');
 $('#btn-log-close').onclick = () => $('#drawer').classList.remove('open');
 $('#btn-settings').onclick = () => { $('#settings').hidden = false; };
 $('#btn-settings-close').onclick = () => { $('#settings').hidden = true; };
-const bind = (id, key, after) => { const el = $(id); el.checked = opts[key]; el.onchange = () => { opts[key] = el.checked; saveOpts(); after && after(); }; };
-bind('#opt-wake', 'wake', () => opts.wake ? startListening() : stopListening());
+const bind = (id, key, after) => { const el = $(id); if (!el) return; el.checked = opts[key]; el.onchange = () => { opts[key] = el.checked; saveOpts(); after && after(); }; };
+bind('#opt-saymac', 'saymac');
+bind('#opt-wake', 'wake', () => setWakeMode(opts.wake));
 bind('#opt-speak', 'speak');
 bind('#opt-proactive', 'proactive', () => fetch('/api/proactive', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: opts.proactive }) }));
 bind('#opt-eco', 'eco', applyEco);
@@ -276,8 +322,8 @@ function syncOpts() { $('#opt-eco').checked = opts.eco; saveOpts(); }
   setTimeout(() => { o.classList.add('done'); setTimeout(() => o.remove(), 700); }, 1600);
 })();
 
-// greeting + start listening hands-free
+// greeting. Mic needs one tap first (browser rule), so prompt for it.
 setState('idle', 'в режиме ожидания');
 captionEl.textContent = 'Системы в норме, босс.';
-addLog('edith', 'Системы в норме, босс. Я на связи — просто скажите «Эдит».', 'edith');
-if (opts.wake) startListening();
+addLog('edith', 'Системы в норме, босс. Нажмите микрофон и говорите.', 'edith');
+micUI('off', SR ? 'нажмите, чтобы говорить' : 'голос не работает (нужен Chrome)');

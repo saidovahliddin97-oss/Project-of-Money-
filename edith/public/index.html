@@ -55,7 +55,12 @@
 
     <div class="you" id="you" aria-live="polite"></div>
     <div class="caption" id="caption" aria-live="polite"></div>
-    <div class="hint" id="hint">Скажите «Эдит» и задачу. Например: «Эдит, что у меня на экране?»</div>
+    <div class="hint" id="hint">Нажмите микрофон и говорите. Или напишите внизу.</div>
+
+    <button class="mic-big" id="mic" type="button" aria-label="Говорить">
+      <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>
+      <span id="mic-text">нажмите, чтобы говорить</span>
+    </button>
   </main>
 
   <!-- typing fallback -->
@@ -82,6 +87,7 @@
         <span>настройки</span>
         <button class="icon-btn" id="btn-settings-close" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
+      <label class="switch"><input type="checkbox" id="opt-saymac" checked /><span>голос Mac (Siri / системный голос) — звучит естественно</span></label>
       <label class="field">
         <span class="field-label">голос эдит</span>
         <div class="row">
@@ -90,7 +96,7 @@
         </div>
         <span class="field-note" id="voice-note"></span>
       </label>
-      <label class="switch"><input type="checkbox" id="opt-wake" checked /><span>слушать фоном, реагировать на «Эдит»</span></label>
+      <label class="switch"><input type="checkbox" id="opt-wake" /><span>слушать фоном, реагировать на «Эдит» (руки свободны)</span></label>
       <label class="switch"><input type="checkbox" id="opt-speak" checked /><span>отвечать голосом</span></label>
       <label class="switch"><input type="checkbox" id="opt-proactive" checked /><span>эдит пишет первой</span></label>
       <label class="switch"><input type="checkbox" id="opt-eco" checked /><span>эко-режим (меньше анимаций, бережёт батарею)</span></label>

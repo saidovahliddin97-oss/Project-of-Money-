@@ -85,6 +85,17 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round
 .caption .cursor::after { content: "▍"; color: var(--cyan); animation: blink 1s steps(2) infinite; }
 .hint { font-size: 13px; color: var(--ink-dim); opacity: .8; max-width: 620px; }
 
+/* big mic button */
+.mic-big { display: inline-flex; align-items: center; gap: 10px; margin-top: 4px;
+  padding: 11px 20px; border-radius: 30px; cursor: pointer;
+  border: 1px solid var(--cyan); background: rgba(56,214,255,.08); color: var(--cyan);
+  font-size: 14px; letter-spacing: .02em; transition: .15s; }
+.mic-big svg { width: 20px; height: 20px; }
+.mic-big:hover { background: rgba(56,214,255,.16); box-shadow: 0 0 16px var(--glow); }
+.mic-big.on { border-color: var(--ice); color: var(--ice); background: rgba(143,233,255,.14); box-shadow: 0 0 20px var(--glow); }
+.mic-big.rec { border-color: var(--warn); color: var(--warn); background: rgba(255,207,107,.12); box-shadow: 0 0 22px rgba(255,207,107,.5); animation: micpulse 1.1s ease-in-out infinite; }
+@keyframes micpulse { 0%,100% { box-shadow: 0 0 10px rgba(255,207,107,.4); } 50% { box-shadow: 0 0 26px rgba(255,207,107,.7); } }
+
 /* ---------- composer ---------- */
 .composer { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 6; display: flex; align-items: center; gap: 8px; width: min(560px, 86vw); }
 .composer input { flex: 1; background: rgba(5,16,26,.8); border: 1px solid var(--line); border-radius: 12px; padding: 12px 15px; font-size: 15px; outline: none; }

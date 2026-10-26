@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { streamChat, describeImage, MODEL_LABEL, config, chain } from './lib/llm.mjs';
-import { runAction, captureScreen, describe, isSensitive, enabledActions } from './lib/computer.mjs';
+import { runAction, captureScreen, sayText as speakOnMac, describe, isSensitive, enabledActions } from './lib/computer.mjs';
 import { webSearch } from './lib/search.mjs';
 import { Proactive } from './lib/proactive.mjs';
 
@@ -248,6 +248,13 @@ const server = http.createServer(async (req, res) => {
       }
       await runLoop(res, messages);
       res.end();
+      return;
+    }
+
+    if (req.method === 'POST' && url === '/api/say') {
+      const { text } = await readBody(req);
+      try { await speakOnMac(String(text || '')); res.writeHead(204).end(); }
+      catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: String(e.message || e) })); }
       return;
     }
 
