@@ -16,6 +16,7 @@
     "test": "node --test \"tests/unit/**/*.test.mjs\" \"tools/**/tests/*.test.mjs\"",
     "test:e2e": "node tests/e2e/run-e2e.mjs",
     "dev": "node scripts/dev-server.mjs 8787",
+    "edith": "node --env-file=edith/.env edith/server.mjs",
     "dev:cf": "npx wrangler@4.139.0 pages dev public --compatibility-date=2026-09-01 --kv LL_KV",
     "guides": "node scripts/build-guides.mjs",
     "lava:products": "node scripts/lava-products.mjs",

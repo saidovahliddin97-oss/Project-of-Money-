@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EDITH</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/edith.css" />
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="scanline"></div>
+
+  <main class="hud">
+    <!-- Central reactor -->
+    <section class="core">
+      <div class="reactor" id="reactor" data-state="idle">
+        <svg viewBox="0 0 300 300" class="rings">
+          <circle class="ring ring-outer" cx="150" cy="150" r="140" />
+          <circle class="ring ring-mid"   cx="150" cy="150" r="112" />
+          <circle class="ring ring-in"    cx="150" cy="150" r="84" />
+          <g class="ticks" id="ticks"></g>
+          <circle class="ring ring-dash"  cx="150" cy="150" r="128" />
+        </svg>
+        <div class="reactor-center">
+          <div class="brand">EDITH</div>
+          <div class="status" id="status">в сети</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Conversation -->
+    <section class="panel">
+      <header class="panel-head">
+        <span class="dot"></span>
+        <span id="model-label">EDITH · канал связи</span>
+        <label class="toggle" title="Эдит сама пишет первой">
+          <input type="checkbox" id="proactive" checked />
+          <span>инициатива</span>
+        </label>
+      </header>
+
+      <div class="log" id="log"></div>
+
+      <div id="confirm-bar" class="confirm hidden"></div>
+
+      <form class="composer" id="composer">
+        <button type="button" id="mic" class="mic" title="Голос">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>
+        </button>
+        <input id="input" type="text" autocomplete="off" placeholder="Говорите, босс…" />
+        <button type="submit" class="send" title="Отправить">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 12 20 4l-4 16-4-7-8-1Z"/></svg>
+        </button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/edith.js"></script>
+</body>
+</html>
