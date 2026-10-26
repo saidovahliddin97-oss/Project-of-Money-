@@ -269,9 +269,16 @@ function makeDraggable(el, handle) {
 
 // ---- power saver (less battery) ----
 const powerToggle = document.querySelector('#power');
-let userEco = false;
+// Eco is on by default; the boss's choice is remembered between launches.
+let userEco = true;
+try { const saved = localStorage.getItem('edith-eco'); if (saved !== null) userEco = saved === '1'; } catch {}
+powerToggle.checked = userEco;
 function applyEco() { document.body.classList.toggle('eco', userEco || document.hidden); }
-powerToggle.addEventListener('change', () => { userEco = powerToggle.checked; applyEco(); });
+applyEco();
+powerToggle.addEventListener('change', () => {
+  userEco = powerToggle.checked; applyEco();
+  try { localStorage.setItem('edith-eco', userEco ? '1' : '0'); } catch {}
+});
 
 // pause heavy animations when the tab isn't visible — the biggest easy saving
 document.addEventListener('visibilitychange', applyEco);

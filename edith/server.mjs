@@ -13,6 +13,8 @@ import { webSearch } from './lib/search.mjs';
 import { Proactive } from './lib/proactive.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+// Settings from edith/.env apply even when started as plain `node server.mjs`.
+try { process.loadEnvFile(path.join(HERE, '.env')); } catch {}
 const PUBLIC = path.join(HERE, 'public');
 const PORT = Number(process.env.EDITH_PORT || 4330);
 
@@ -237,6 +239,8 @@ setInterval(async () => {
 
 server.listen(PORT, () => {
   const c = config();
-  const keyNote = c.provider === 'ollama' ? 'локально, ключ не нужен' : (c.key && c.key !== 'none' ? 'ключ найден' : 'КЛЮЧ НЕ ЗАДАН — см. edith/.env.example');
+  const keyNote = c.provider === 'ollama'
+    ? (/-cloud$/.test(c.model) ? 'облако Ollama — Mac почти не нагружается' : 'локально на Mac, ключ не нужен')
+    : (c.key && c.key !== 'none' ? 'ключ найден' : 'КЛЮЧ НЕ ЗАДАН — см. edith/.env.example');
   console.log(`\n  ЭДИТ запущена.  Откройте  http://localhost:${PORT}\n  Мозг: ${MODEL_LABEL()}  |  ${keyNote}\n`);
 });

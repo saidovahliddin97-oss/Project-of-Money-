@@ -4,8 +4,10 @@
 // Zero-dependency: глобальный fetch (Node 20+).
 
 const PRESETS = {
-  // Локально на Mac. Бесплатно, без ключа, без VPN. Нужен установленный Ollama.
-  ollama:     { base: 'http://localhost:11434/v1', keyEnv: null,                model: 'llama3.1',                              vision: false },
+  // Через приложение Ollama. По умолчанию облачная модель (*-cloud): считает на
+  // серверах Ollama, Mac почти не нагружается; нужен вход в аккаунт Ollama
+  // (Sign In, бесплатно). Локальная альтернатива: EDITH_MODEL=llama3.1.
+  ollama:     { base: 'http://localhost:11434/v1', keyEnv: null,                model: 'gemma4:31b-cloud',                      vision: false },
   // Облачные бесплатные (нужен бесплатный ключ, без карты).
   groq:       { base: 'https://api.groq.com/openai/v1',                        keyEnv: 'GROQ_API_KEY',       model: 'llama-3.3-70b-versatile',               vision: false },
   gemini:     { base: 'https://generativelanguage.googleapis.com/v1beta/openai', keyEnv: 'GEMINI_API_KEY',   model: 'gemini-2.0-flash',                      vision: true },
@@ -40,13 +42,25 @@ async function post(body, stream) {
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    const hint = c.provider === 'ollama'
-      ? ' (Ollama запущен? Модель скачана: `ollama pull ' + c.model + '`?)'
-      : ' (проверьте ключ в edith/.env)';
-    throw new Error(`LLM ${res.status}: ${text.slice(0, 300)}${hint}`);
+    const err = new Error(`LLM ${res.status}: ${text.slice(0, 300)}${hint(c, res.status)}`);
+    err.status = res.status;
+    err.noTools = /does not support tools|tool(s)? (are|is) not supported/i.test(text);
+    throw err;
   }
   return res;
 }
+
+function hint(c, status) {
+  if (c.provider !== 'ollama') return ' (проверьте ключ в edith/.env)';
+  if (/-cloud$/.test(c.model) && (status === 401 || status === 403)) {
+    return ' (Облачной модели нужен вход: откройте приложение Ollama → Sign In, или в Терминале `ollama signin`.)';
+  }
+  if (status === 404) return ` (Модель не найдена. В новом окне Терминала: \`ollama pull ${c.model}\`.)`;
+  return ' (Приложение Ollama запущено? Иконка ламы должна быть в строке меню.)';
+}
+
+// Remember models that rejected tool calling, so we stop sending tools to them.
+const noToolModels = new Set();
 
 /** Непотоковый вызов. Возвращает строку-ответ. */
 export async function chat(messages, { system, max_tokens = 300, temperature = 0.6 } = {}) {
@@ -63,9 +77,19 @@ export async function chat(messages, { system, max_tokens = 300, temperature = 0
 export async function streamChat({ messages, system, tools, max_tokens = 1024, temperature = 0.6 }, onText) {
   const msgs = system ? [{ role: 'system', content: system }, ...messages] : messages;
   const body = { messages: msgs, max_tokens, temperature };
-  if (tools?.length) { body.tools = tools; body.tool_choice = 'auto'; }
+  const model = config().model;
+  if (tools?.length && !noToolModels.has(model)) { body.tools = tools; body.tool_choice = 'auto'; }
 
-  const res = await post(body, true);
+  let res;
+  try {
+    res = await post(body, true);
+  } catch (e) {
+    // A model without tool support can still chat: retry once without tools.
+    if (!e.noTools || !body.tools) throw e;
+    noToolModels.add(model);
+    delete body.tools; delete body.tool_choice;
+    res = await post(body, true);
+  }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = '';

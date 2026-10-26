@@ -20,7 +20,7 @@ fi
 if [ ! -f edith/.env ]; then
   cp edith/.env.example edith/.env
   echo
-  echo "Создан edith/.env с настройками по умолчанию (бесплатный мозг — Ollama)."
+  echo "Создан edith/.env с настройками по умолчанию (бесплатный мозг — облачная модель Ollama)."
   echo "Если захотите облачный вариант (Groq/Gemini) — впишите ключ в этот файл."
 fi
 
@@ -30,7 +30,7 @@ PROVIDER=${PROVIDER:-ollama}
 PORT=$(grep -E '^EDITH_PORT=' edith/.env | tail -1 | cut -d= -f2 | tr -d ' ')
 PORT=${PORT:-4330}
 MODEL=$(grep -E '^EDITH_MODEL=' edith/.env | tail -1 | cut -d= -f2 | tr -d ' ')
-MODEL=${MODEL:-llama3.1}
+MODEL=${MODEL:-gemma4:31b-cloud}
 
 # 4) Для Ollama — проверить, что он установлен и модель скачана
 if [ "$PROVIDER" = "ollama" ]; then
