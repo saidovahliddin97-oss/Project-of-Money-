@@ -103,13 +103,17 @@ function showConfirm(actions) {
 const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 // ---------- send ----------
+// only glance at the screen when the message is actually about it — keeps
+// normal chat fast (a vision round-trip adds several seconds)
+const SCREEN_WORDS = /(экран|вид(ишь|ел|но)|сейчас на|что (у меня |тут |здесь )?(на|в)|открыт|слева|справа|сверху|снизу|в углу|в центре|кнопк|надпис|这|screen|что это|что показ|прочти|прочитай|смотр)/i;
 async function send(text) {
   text = (text || '').trim(); if (!text || busy) return;
   youEl.textContent = text; youEl.classList.remove('active'); hintEl.style.display = 'none';
   addLog('user', text);
   messages.push({ role: 'user', content: text });
   input.value = '';
-  await streamPost('/api/chat', { messages, eyes: opts.eyes });
+  const eyes = opts.eyes && SCREEN_WORDS.test(text);
+  await streamPost('/api/chat', { messages, eyes });
 }
 composer.addEventListener('submit', (e) => { e.preventDefault(); send(input.value); });
 
@@ -141,6 +145,9 @@ if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged
 function speak(text) {
   if (!opts.speak || !text) return;
   if (opts.saymac) { speakViaMac(text); return; }
+  speakViaBrowser(text);
+}
+function speakViaBrowser(text) {
   if (!('speechSynthesis' in window)) return;
   try {
     speechSynthesis.cancel();
@@ -152,11 +159,12 @@ function speak(text) {
   } catch {}
 }
 async function speakViaMac(text) {
+  speaking = true; micPause(true);
   try {
-    speaking = true; micPause(true);
-    await fetch('/api/say', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 700) }) });
-  } catch {}
-  finally { speaking = false; micPause(false); }
+    const r = await fetch('/api/say', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 700) }) });
+    if (!r.ok) { speaking = false; micPause(false); speakViaBrowser(text); return; } // say failed → browser voice
+  } catch { speaking = false; micPause(false); speakViaBrowser(text); return; }
+  speaking = false; micPause(false);
 }
 
 // ---------- voice input ----------
