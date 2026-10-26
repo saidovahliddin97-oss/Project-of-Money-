@@ -21,8 +21,10 @@ const eventClients = new Set();
 const SYSTEM = `Ты — Эдит (EDITH), персональный ИИ-ассистент босса в стиле Джарвиса из фильмов про Железного человека.
 Характер: спокойный, собранный, предельно полезный, с лёгкой иронией. Обращайся к пользователю «босс».
 Язык: русский. Пиши кратко и по делу, без эмодзи.
-У тебя есть инструменты управления этим Mac (открыть программу/ссылку, печатать, клики, горячие клавиши, снимок экрана, уведомления, AppleScript, команды терминала) и веб-поиск.
+У тебя есть инструменты управления этим Mac (открыть программу/ссылку, печатать, клики, горячие клавиши, снимок экрана, уведомления, AppleScript, команды терминала), веб-поиск и окна внутри собственного интерфейса.
 Используй инструменты, когда это помогает выполнить просьбу. Опасные действия (ввод текста, клики, клавиши, AppleScript, терминал) система сама попросит подтвердить у босса — не спрашивай подтверждение словами, просто вызывай инструмент, подтверждение возьмёт на себя интерфейс.
+Окна интерфейса (open_window): чтобы показать сайт, заметку или картинку КИНОШНО, прямо внутри твоего HUD, — используй open_window (kind web/note/image). Чтобы передать в обычный браузер Mac — open_url. close_windows закрывает все окна.
+Отвечай кратко — это экономит и время, и заряд батареи ноутбука босса.
 Если инструмент недоступен или вернул ошибку — честно скажи об этом.`;
 
 // --- Claude tool definitions mirroring the computer bridge -----------------
@@ -39,11 +41,24 @@ const COMPUTER_TOOLS = [
   { name: 'shell', description: 'Выполнить команду в терминале (bash).', input_schema: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'], additionalProperties: false } },
 ];
 
+// HUD tools are purely visual — they open "windows" inside the EDITH interface
+// (cinematic, in-browser). They never touch the Mac, so they are always safe
+// and need no confirmation. Executed by emitting an SSE 'panel' event.
+const HUD_TOOLS = [
+  { name: 'open_window', description: 'Открыть окно ВНУТРИ интерфейса Эдит (киношно, не в обычном браузере). kind: "web" — встроить сайт по url; "note" — показать текст; "image" — показать картинку по url.', input_schema: { type: 'object', properties: { title: { type: 'string' }, kind: { type: 'string', enum: ['web', 'note', 'image'] }, url: { type: 'string' }, text: { type: 'string' } }, required: ['title', 'kind'], additionalProperties: false } },
+  { name: 'close_windows', description: 'Закрыть все окна в интерфейсе Эдит.', input_schema: { type: 'object', properties: {}, additionalProperties: false } },
+];
+const HUD_NAMES = new Set(HUD_TOOLS.map((t) => t.name));
+const isHud = (name) => HUD_NAMES.has(name);
+// HUD tools are never sensitive; Mac tools use the bridge's classification.
+const sensitive = (name) => (isHud(name) ? false : isSensitive(name));
+
 function tools() {
   // Only expose the actions that are actually enabled (shell/applescript are
   // off unless EDITH_ALLOW_SHELL=1), so Claude is never offered a disabled tool.
   const allowed = new Set(enabledActions());
   const t = COMPUTER_TOOLS.filter((tool) => allowed.has(tool.name));
+  t.push(...HUD_TOOLS);
   if (process.env.EDITH_WEBSEARCH !== '0') {
     t.push({ type: 'web_search_20260209', name: 'web_search', max_uses: 5 });
   }
@@ -79,7 +94,8 @@ function sse(res, obj) {
 async function runLoop(res, messages) {
   for (;;) {
     const msg = await streamMessage(
-      { max_tokens: 8000, system: SYSTEM, tools: tools(), messages },
+      // low effort keeps replies fast and frugal for a chat assistant
+      { max_tokens: 8000, system: SYSTEM, output_config: { effort: 'low' }, tools: tools(), messages },
       (delta) => sse(res, { type: 'text', delta }),
     );
     messages.push({ role: 'assistant', content: msg.content });
@@ -93,13 +109,13 @@ async function runLoop(res, messages) {
     }
 
     // If any tool in this turn is sensitive, hand the whole turn to the user.
-    if (toolUses.some((t) => isSensitive(t.name))) {
+    if (toolUses.some((t) => sensitive(t.name))) {
       sse(res, {
         type: 'confirm',
         messages,
         actions: toolUses.map((t) => ({
           id: t.id, name: t.name, input: t.input,
-          sensitive: isSensitive(t.name), desc: describe({ name: t.name, ...t.input }),
+          sensitive: sensitive(t.name), desc: describe({ name: t.name, ...t.input }),
         })),
       });
       return;
@@ -107,15 +123,24 @@ async function runLoop(res, messages) {
 
     // All safe — execute now and continue without bothering the user.
     const results = [];
-    for (const t of toolUses) results.push(await execToResult(t));
+    for (const t of toolUses) results.push(await execToResult(res, t));
     messages.push({ role: 'user', content: results });
   }
 }
 
 // Execute one tool_use and wrap it as a tool_result content block.
-async function execToResult(toolUse, approved = true) {
+async function execToResult(res, toolUse, approved = true) {
   if (!approved) {
     return { type: 'tool_result', tool_use_id: toolUse.id, is_error: true, content: 'Босс отклонил это действие.' };
+  }
+  // HUD tools are client-side: emit a panel event, no Mac access.
+  if (isHud(toolUse.name)) {
+    if (toolUse.name === 'close_windows') {
+      sse(res, { type: 'panel', op: 'close_all' });
+      return { type: 'tool_result', tool_use_id: toolUse.id, content: 'Окна закрыты.' };
+    }
+    sse(res, { type: 'panel', op: 'open', window: { id: toolUse.id, ...toolUse.input } });
+    return { type: 'tool_result', tool_use_id: toolUse.id, content: `Окно «${toolUse.input?.title || ''}» открыто в интерфейсе. Если сайт запрещает встраивание, босс увидит кнопку «открыть в браузере».` };
   }
   try {
     const out = await runAction({ name: toolUse.name, ...toolUse.input });
@@ -185,8 +210,8 @@ const server = http.createServer(async (req, res) => {
       const toolUses = (last?.content || []).filter((b) => b.type === 'tool_use');
       const results = [];
       for (const t of toolUses) {
-        const approved = !isSensitive(t.name) || approvals?.[t.id] === true;
-        results.push(await execToResult(t, approved));
+        const approved = !sensitive(t.name) || approvals?.[t.id] === true;
+        results.push(await execToResult(res, t, approved));
       }
       messages.push({ role: 'user', content: results });
       await runLoop(res, messages);

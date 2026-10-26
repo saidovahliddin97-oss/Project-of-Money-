@@ -67,6 +67,9 @@ async function streamPost(url, payload) {
       if (ev.type === 'text') {
         if (!liveBody) { liveBody = addMsg('edith', ''); liveBody.parentElement.classList.add('cursor'); setState('speaking', 'ответ'); }
         liveText += ev.delta; liveBody.textContent = liveText; log.scrollTop = log.scrollHeight;
+      } else if (ev.type === 'panel') {
+        if (ev.op === 'close_all') closeAllWindows();
+        else if (ev.op === 'open') openWindow(ev.window);
       } else if (ev.type === 'confirm') {
         messages = ev.messages;
         if (liveBody) liveBody.parentElement.classList.remove('cursor');
@@ -193,10 +196,113 @@ es.onmessage = (e) => {
 };
 
 // heartbeat so Эдит knows you're present
-setInterval(() => { fetch('/api/beat', { method: 'POST' }).catch(() => {}); }, 60 * 1000);
+setInterval(() => { if (!document.hidden) fetch('/api/beat', { method: 'POST' }).catch(() => {}); }, 60 * 1000);
 proactiveToggle.addEventListener('change', () => {
   fetch('/api/proactive', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: proactiveToggle.checked }) });
 });
+
+// ---- cinematic in-HUD windows ----
+const stage = document.querySelector('#stage');
+let winCount = 0;
+function openWindow(w) {
+  const el = document.createElement('div');
+  el.className = 'win';
+  el.dataset.id = w.id;
+  // cascade position so multiple windows don't fully overlap
+  const off = (winCount++ % 5) * 26;
+  el.style.left = `calc(12% + ${off}px)`;
+  el.style.top = `calc(14% + ${off}px)`;
+
+  const bar = document.createElement('div'); bar.className = 'win-bar';
+  const title = document.createElement('div'); title.className = 'win-title'; title.textContent = w.title || 'окно';
+  bar.appendChild(title);
+  if (w.kind === 'web' && w.url) {
+    const ext = document.createElement('button'); ext.className = 'win-x'; ext.textContent = '↗'; ext.title = 'Открыть в браузере';
+    ext.onclick = () => window.open(w.url, '_blank', 'noopener');
+    bar.appendChild(ext);
+  }
+  const x = document.createElement('button'); x.className = 'win-x'; x.textContent = '✕'; x.title = 'Закрыть';
+  x.onclick = () => el.remove();
+  bar.appendChild(x);
+
+  const body = document.createElement('div'); body.className = 'win-body';
+  if (w.kind === 'web' && w.url) {
+    const frame = document.createElement('iframe');
+    frame.src = w.url; frame.referrerPolicy = 'no-referrer';
+    const fb = document.createElement('div'); fb.className = 'win-fallback';
+    fb.innerHTML = `<div>Сайт не разрешает встраивание в интерфейс.</div>`;
+    const open = document.createElement('button'); open.className = 'btn'; open.textContent = 'Открыть в браузере';
+    open.onclick = () => window.open(w.url, '_blank', 'noopener'); fb.appendChild(open);
+    body.append(frame, fb);
+    // if it doesn't load in a few seconds, assume it was blocked
+    let loaded = false;
+    frame.addEventListener('load', () => { loaded = true; });
+    setTimeout(() => { if (!loaded) body.classList.add('blocked'); }, 4500);
+  } else if (w.kind === 'image' && w.url) {
+    const img = document.createElement('img'); img.src = w.url; img.alt = w.title || ''; body.appendChild(img);
+  } else {
+    const note = document.createElement('div'); note.className = 'win-note'; note.textContent = w.text || w.url || ''; body.appendChild(note);
+  }
+
+  el.append(bar, body);
+  stage.appendChild(el);
+  makeDraggable(el, bar);
+}
+function closeAllWindows() { stage.innerHTML = ''; winCount = 0; }
+function makeDraggable(el, handle) {
+  let sx, sy, ox, oy, dragging = false;
+  handle.addEventListener('pointerdown', (e) => {
+    if (e.target.classList.contains('win-x')) return;
+    dragging = true; handle.classList.add('drag'); handle.setPointerCapture(e.pointerId);
+    sx = e.clientX; sy = e.clientY; const r = el.getBoundingClientRect(); ox = r.left; oy = r.top;
+    el.style.left = ox + 'px'; el.style.top = oy + 'px';
+  });
+  handle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    el.style.left = (ox + e.clientX - sx) + 'px';
+    el.style.top = Math.max(0, oy + e.clientY - sy) + 'px';
+  });
+  const end = () => { dragging = false; handle.classList.remove('drag'); };
+  handle.addEventListener('pointerup', end);
+  handle.addEventListener('pointercancel', end);
+}
+
+// ---- power saver (less battery) ----
+const powerToggle = document.querySelector('#power');
+let userEco = false;
+function applyEco() { document.body.classList.toggle('eco', userEco || document.hidden); }
+powerToggle.addEventListener('change', () => { userEco = powerToggle.checked; applyEco(); });
+
+// pause heavy animations when the tab isn't visible — the biggest easy saving
+document.addEventListener('visibilitychange', applyEco);
+
+// auto-enable eco on low battery (and restore when charging/topped up)
+let autoedOnce = false;
+if (navigator.getBattery) {
+  navigator.getBattery().then((b) => {
+    const check = () => {
+      const low = !b.charging && b.level < 0.3;
+      if (low && !userEco) { userEco = true; powerToggle.checked = true; applyEco(); if (!autoedOnce) { autoedOnce = true; addMsg('sys', 'Низкий заряд — включил эко-режим (меньше анимаций).', 'sys'); } }
+      else if (b.charging && autoedOnce && userEco) { userEco = false; powerToggle.checked = false; applyEco(); }
+    };
+    b.addEventListener('levelchange', check); b.addEventListener('chargingchange', check); check();
+  }).catch(() => {});
+}
+
+// ---- boot sequence ----
+(function boot() {
+  const overlay = document.querySelector('#boot');
+  const lines = document.querySelector('#boot-lines');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const steps = ['> инициализация ядра EDITH…', '> голосовой канал: онлайн', '> мост управления Mac: готов', '> связь с Claude: установлена', '> добро пожаловать, босс'];
+  if (reduced) { overlay.classList.add('done'); setTimeout(() => overlay.remove(), 600); return; }
+  steps.forEach((s, i) => {
+    setTimeout(() => {
+      const d = document.createElement('div'); d.textContent = s; lines.appendChild(d);
+    }, 350 * i);
+  });
+  setTimeout(() => { overlay.classList.add('done'); setTimeout(() => overlay.remove(), 700); }, 350 * steps.length + 600);
+})();
 
 // greeting
 addMsg('edith', 'Системы в норме, босс. Я на связи. Говорите или пишите — найду, открою, выполню.', 'edith');

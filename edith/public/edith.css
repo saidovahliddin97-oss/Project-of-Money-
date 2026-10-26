@@ -144,3 +144,50 @@ body {
 
 .cursor::after { content: '▋'; color: var(--cyan); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
+
+/* ---- cinematic in-HUD windows ---- */
+.stage { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+.win {
+  position: absolute; pointer-events: auto;
+  width: min(520px, 70vw); height: min(380px, 60vh);
+  background: linear-gradient(180deg, rgba(6,26,40,0.95), rgba(2,10,18,0.96));
+  border: 1px solid var(--cyan); border-radius: 12px;
+  box-shadow: 0 0 0 1px rgba(40,231,255,0.15), 0 10px 50px rgba(0,0,0,0.7), 0 0 30px var(--cyan-glow);
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: winopen 0.28s cubic-bezier(.2,.9,.3,1.2);
+}
+@keyframes winopen { from { opacity: 0; transform: scale(0.9) translateY(8px); } to { opacity: 1; transform: none; } }
+.win-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: grab; user-select: none; background: rgba(40,231,255,0.06); }
+.win-bar.drag { cursor: grabbing; }
+.win-title { font-family: 'Orbitron'; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cyan); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win-x { width: 20px; height: 20px; border-radius: 5px; border: 1px solid var(--line); background: transparent; color: var(--cyan); cursor: pointer; font-size: 13px; line-height: 1; }
+.win-x:hover { background: rgba(255,182,72,0.18); border-color: var(--warn); color: var(--warn); }
+.win-body { flex: 1; overflow: auto; position: relative; }
+.win-body iframe { width: 100%; height: 100%; border: 0; background: #04111c; }
+.win-note { padding: 14px 16px; color: var(--ink); font-size: 15px; line-height: 1.55; white-space: pre-wrap; }
+.win-body img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.win-fallback { padding: 20px; color: var(--ink-soft); font-size: 14px; display: none; flex-direction: column; gap: 12px; align-items: flex-start; }
+.win-body.blocked iframe { display: none; }
+.win-body.blocked .win-fallback { display: flex; }
+
+/* ---- boot sequence ---- */
+.boot { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: grid; place-content: center; gap: 20px; text-align: center; transition: opacity 0.6s; }
+.boot.done { opacity: 0; pointer-events: none; }
+.boot-brand { font-family: 'Orbitron'; font-weight: 900; font-size: clamp(40px, 10vw, 96px); letter-spacing: 0.3em; color: #eafdff; text-shadow: 0 0 30px var(--cyan-glow); animation: pulse 2s infinite; }
+.boot-lines { font-family: 'Rajdhani'; color: var(--cyan); font-size: 14px; letter-spacing: 0.1em; min-height: 120px; text-align: left; opacity: 0.9; }
+.boot-lines div { opacity: 0; animation: rise 0.3s forwards; }
+
+/* ---- power saver / reduced motion: kill continuous animations ---- */
+body.eco .scanline { display: none; }
+body.eco .ring-mid, body.eco .ring-dash, body.eco .rings,
+body.eco .reactor[data-state] .rings, body.eco .panel-head .dot,
+body.eco .boot-brand, body.eco .mic.rec { animation: none !important; }
+body.eco .panel { backdrop-filter: none; }
+body.eco .grid-bg { opacity: 0.18; }
+body.eco .reactor[data-state="listening"] .ring-in,
+body.eco .reactor[data-state="thinking"] .rings { animation: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline, .ring-mid, .ring-dash, .panel-head .dot, .boot-brand { animation: none !important; }
+  .panel { backdrop-filter: none; }
+}

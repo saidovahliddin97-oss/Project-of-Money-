@@ -13,6 +13,15 @@
   <div class="grid-bg"></div>
   <div class="scanline"></div>
 
+  <!-- cinematic in-HUD windows open here -->
+  <div id="stage" class="stage"></div>
+
+  <!-- boot sequence -->
+  <div id="boot" class="boot">
+    <div class="boot-brand">EDITH</div>
+    <div class="boot-lines" id="boot-lines"></div>
+  </div>
+
   <main class="hud">
     <!-- Central reactor -->
     <section class="core">
@@ -39,6 +48,10 @@
         <label class="toggle" title="Эдит сама пишет первой">
           <input type="checkbox" id="proactive" checked />
           <span>инициатива</span>
+        </label>
+        <label class="toggle" title="Меньше анимаций — меньше расход батареи">
+          <input type="checkbox" id="power" />
+          <span>эко</span>
         </label>
       </header>
 
