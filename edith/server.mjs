@@ -7,8 +7,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { streamChat, MODEL_LABEL, config } from './lib/llm.mjs';
-import { runAction, describe, isSensitive, isEnabled, enabledActions } from './lib/computer.mjs';
+import { streamChat, describeImage, MODEL_LABEL, config, chain } from './lib/llm.mjs';
+import { runAction, captureScreen, describe, isSensitive, enabledActions } from './lib/computer.mjs';
 import { webSearch } from './lib/search.mjs';
 import { Proactive } from './lib/proactive.mjs';
 
@@ -24,9 +24,10 @@ const eventClients = new Set();
 const SYSTEM = `Ты — Эдит (EDITH), персональный ИИ-ассистент босса в стиле Джарвиса из фильмов про Железного человека.
 Характер: спокойный, собранный, предельно полезный, с лёгкой иронией. Обращайся к пользователю «босс».
 Язык: русский. Пиши кратко и по делу, без эмодзи.
-У тебя есть инструменты: управление этим Mac (открыть программу/ссылку, печатать, клики, горячие клавиши, снимок экрана, уведомления), веб-поиск (web_search) и окна внутри собственного интерфейса (open_window / close_windows).
+У тебя есть инструменты: управление этим Mac (открыть программу/ссылку, печатать, клики, горячие клавиши, уведомления), зрение (look_at_screen — посмотреть, что сейчас на экране босса), веб-поиск (web_search) и окна внутри собственного интерфейса (open_window / close_windows).
 Используй инструменты, когда это помогает выполнить просьбу. Опасные действия (ввод текста, клики, клавиши) система сама попросит подтвердить у босса — не проси подтверждение словами, просто вызови инструмент.
 Чтобы показать сайт/заметку/картинку КИНОШНО внутри твоего интерфейса — open_window (kind web/note/image). Чтобы передать в обычный браузер — open_url.
+Если босс спрашивает, что у него на экране, что где написано, что открыто, или просит помочь с тем, что он видит, — сначала вызови look_at_screen с точным вопросом.
 Если нужен свежий факт из интернета — вызови web_search и перескажи результат своими словами со ссылкой.
 Отвечай кратко — это экономит время и заряд батареи. Если инструмент вернул ошибку — честно скажи.`;
 
@@ -41,7 +42,6 @@ const COMPUTER_TOOLS = {
   open_app:   fn('open_app', 'Открыть приложение по имени (например "Safari").', { app: { type: 'string' } }, ['app']),
   open_url:   fn('open_url', 'Открыть ссылку в браузере по умолчанию.', { url: { type: 'string' } }, ['url']),
   notify:     fn('notify', 'Показать системное уведомление.', { text: { type: 'string' } }, ['text']),
-  screenshot: fn('screenshot', 'Сделать снимок экрана.', {}),
   type_text:  fn('type_text', 'Напечатать текст в активном окне.', { text: { type: 'string' } }, ['text']),
   key:        fn('key', 'Нажать сочетание клавиш, например "cmd+s".', { key: { type: 'string' } }, ['key']),
   click:      fn('click', 'Кликнуть мышью по координатам экрана.', { x: { type: 'number' }, y: { type: 'number' } }, ['x', 'y']),
@@ -54,19 +54,23 @@ const HUD_TOOLS = {
   close_windows: fn('close_windows', 'Закрыть все окна в интерфейсе Эдит.', {}),
 };
 
+const SCREEN_TOOL = fn('look_at_screen', 'Посмотреть на экран Mac прямо сейчас и ответить на вопрос о нём (что открыто, что где написано, где кнопка).', { question: { type: 'string', description: 'Что именно нужно узнать на экране' } }, ['question']);
+
 const SEARCH_TOOL = fn('web_search', 'Искать в интернете (бесплатно, без ключа). Вернёт топ-результаты.', { query: { type: 'string' } }, ['query']);
 
 const HUD_NAMES = new Set(Object.keys(HUD_TOOLS));
 const isHud = (name) => HUD_NAMES.has(name);
 const isSearch = (name) => name === 'web_search';
+const isScreen = (name) => name === 'look_at_screen';
 // HUD and search tools are never sensitive; Mac tools use the bridge's class.
-const sensitive = (name) => (isHud(name) || isSearch(name) ? false : isSensitive(name));
+const sensitive = (name) => (isHud(name) || isSearch(name) || isScreen(name) ? false : isSensitive(name));
 
 function tools() {
   const allowed = new Set(enabledActions());
   const list = Object.entries(COMPUTER_TOOLS).filter(([n]) => allowed.has(n)).map(([, t]) => t);
   list.push(...Object.values(HUD_TOOLS));
   if (process.env.EDITH_WEBSEARCH !== '0') list.push(SEARCH_TOOL);
+  if (process.env.EDITH_SCREEN !== '0') list.push(SCREEN_TOOL);
   return list;
 }
 
@@ -83,6 +87,35 @@ const sse = (res, obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
 // Run the agent loop, streaming to the SSE response. `messages` is the full
 // history (client-owned, OpenAI format). Returns when it needs confirmation
 // or is done.
+// Live screen awareness: before answering, glance at the screen and inject a
+// short description so Эдит always answers about what's on screen right now.
+// Throttled so rapid messages reuse a very recent glance.
+let lastGlance = { at: 0, text: '' };
+async function attachScreen(res, messages) {
+  // drop any previous screen notes so only the freshest glance remains
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'system' && typeof messages[i].content === 'string' && messages[i].content.startsWith('[Экран босса')) messages.splice(i, 1);
+  }
+  try {
+    const now = Date.now();
+    if (now - lastGlance.at > 4000) {
+      sse(res, { type: 'status', text: 'смотрю на экран' });
+      const shot = await captureScreen();
+      const desc = await describeImage(`data:${shot.mediaType};base64,${shot.base64}`,
+        'Это снимок экрана Mac. Опиши кратко по-русски, что сейчас на экране: какое приложение/сайт активно, что в углах и в центре, заметные кнопки и тексты. 3-5 коротких пунктов.');
+      lastGlance = { at: now, text: desc };
+    }
+    if (lastGlance.text) {
+      // put it right before the last user message as a system note
+      const note = { role: 'system', content: `[Экран босса прямо сейчас]\n${lastGlance.text}` };
+      const i = messages.length - 1;
+      messages.splice(Math.max(0, i), 0, note);
+    }
+  } catch (e) {
+    sse(res, { type: 'status', text: 'экран недоступен' });
+  }
+}
+
 async function runLoop(res, messages) {
   for (let guard = 0; guard < 12; guard++) {
     const result = await streamChat(
@@ -122,6 +155,18 @@ async function execToResult(res, toolCall, approved = true) {
   if (!approved) return result('Босс отклонил это действие.');
 
   if (isSearch(name)) return result(await webSearch(input.query));
+
+  if (isScreen(name)) {
+    try {
+      const shot = await captureScreen();
+      sse(res, { type: 'status', text: 'смотрю на экран' });
+      const answer = await describeImage(`data:${shot.mediaType};base64,${shot.base64}`,
+        `Это снимок экрана Mac пользователя. Ответь по-русски, кратко и точно: ${input.question || 'что сейчас на экране?'}`);
+      return result(answer || 'Не удалось разобрать экран.');
+    } catch (e) {
+      return result('Ошибка зрения: ' + (e.message || e));
+    }
+  }
 
   if (isHud(name)) {
     if (name === 'close_windows') { sse(res, { type: 'panel', op: 'close_all' }); return result('Окна закрыты.'); }
@@ -181,10 +226,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url === '/api/chat') {
-      const { messages } = await readBody(req);
+      const { messages, eyes } = await readBody(req);
       proactive.touch('message');
       sseHead(res);
-      await runLoop(res, Array.isArray(messages) ? messages : []);
+      const msgs = Array.isArray(messages) ? messages : [];
+      if (eyes && process.env.EDITH_SCREEN !== '0') await attachScreen(res, msgs);
+      await runLoop(res, msgs);
       res.end();
       return;
     }
@@ -238,9 +285,8 @@ setInterval(async () => {
 }, 60 * 1000);
 
 server.listen(PORT, () => {
+  const list = chain().map((p) => p.id);
   const c = config();
-  const keyNote = c.provider === 'ollama'
-    ? (/-cloud$/.test(c.model) ? 'облако Ollama — Mac почти не нагружается' : 'локально на Mac, ключ не нужен')
-    : (c.key && c.key !== 'none' ? 'ключ найден' : 'КЛЮЧ НЕ ЗАДАН — см. edith/.env.example');
-  console.log(`\n  ЭДИТ запущена.  Откройте  http://localhost:${PORT}\n  Мозг: ${MODEL_LABEL()}  |  ${keyNote}\n`);
+  const note = c.provider === 'ollama' && /-cloud$/.test(c.model) ? 'облако — Mac почти не нагружается' : '';
+  console.log(`\n  ЭДИТ запущена.  Откройте  http://localhost:${PORT}\n  Мозг: ${list.join(' → ') || 'не настроен'}  ${note}\n  (если модель упрётся в лимит, Эдит молча переключится на следующую)\n`);
 });

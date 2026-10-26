@@ -3,73 +3,113 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>EDITH</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet" />
+  <title>E.D.I.T.H.</title>
+  <meta name="theme-color" content="#03070b" />
   <link rel="stylesheet" href="/edith.css" />
 </head>
-<body>
-  <div class="grid-bg"></div>
-  <div class="scanline"></div>
+<body class="eco">
+  <div class="bg" aria-hidden="true"></div>
 
-  <!-- cinematic in-HUD windows open here -->
+  <!-- top bar: identity left, status right -->
+  <header class="top">
+    <div class="ident">
+      <span class="ident-name">E.D.I.T.H.</span>
+      <span class="ident-sub">even dead, i'm the hero</span>
+    </div>
+    <div class="status">
+      <span class="stat" id="stat-mic" title="Микрофон"><i class="led"></i><span>микрофон</span></span>
+      <span class="stat" id="stat-brain" title="Активная модель"><i class="led"></i><span id="brain-label">мозг</span></span>
+      <span class="stat" id="stat-batt" hidden><span id="batt-label"></span></span>
+      <span class="stat clock" id="clock">--:--</span>
+      <button class="icon-btn" id="btn-log" title="История" aria-label="История">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-settings" title="Настройки" aria-label="Настройки">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- center: the core, live transcript, cinematic caption -->
+  <main class="center">
+    <div class="core" id="core" data-state="idle">
+      <svg viewBox="0 0 400 400" aria-hidden="true">
+        <defs>
+          <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#9eeeff" stop-opacity=".55"/>
+            <stop offset="45%" stop-color="#3fd6ff" stop-opacity=".12"/>
+            <stop offset="100%" stop-color="#3fd6ff" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle class="c-glow" cx="200" cy="200" r="120" fill="url(#glow)"/>
+        <g class="c-outer"><circle cx="200" cy="200" r="182"/></g>
+        <g class="c-ticks" id="ticks"></g>
+        <g class="c-arcs-a"><circle cx="200" cy="200" r="150"/></g>
+        <g class="c-arcs-b"><circle cx="200" cy="200" r="132"/></g>
+        <g class="c-inner"><circle cx="200" cy="200" r="96"/></g>
+        <circle class="c-heart" cx="200" cy="200" r="54"/>
+        <circle class="c-dot" cx="200" cy="200" r="4"/>
+      </svg>
+      <div class="core-label" id="core-label">в режиме ожидания</div>
+    </div>
+
+    <div class="you" id="you" aria-live="polite"></div>
+    <div class="caption" id="caption" aria-live="polite"></div>
+    <div class="hint" id="hint">Скажите «Эдит» и задачу. Например: «Эдит, что у меня на экране?»</div>
+  </main>
+
+  <!-- typing fallback -->
+  <form class="composer" id="composer" autocomplete="off">
+    <input id="input" type="text" placeholder="или напишите…" />
+    <button type="submit" class="icon-btn" title="Отправить" aria-label="Отправить">
+      <svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+    </button>
+  </form>
+
+  <!-- history drawer -->
+  <aside class="drawer" id="drawer" aria-label="История">
+    <div class="drawer-head">
+      <span>журнал</span>
+      <button class="icon-btn" id="btn-log-close" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="log" id="log"></div>
+  </aside>
+
+  <!-- settings sheet -->
+  <section class="sheet" id="settings" hidden>
+    <div class="sheet-card">
+      <div class="sheet-head">
+        <span>настройки</span>
+        <button class="icon-btn" id="btn-settings-close" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </div>
+      <label class="field">
+        <span class="field-label">голос эдит</span>
+        <div class="row">
+          <select id="voice-select"></select>
+          <button class="btn" id="voice-test" type="button">прослушать</button>
+        </div>
+        <span class="field-note" id="voice-note"></span>
+      </label>
+      <label class="switch"><input type="checkbox" id="opt-wake" checked /><span>слушать фоном, реагировать на «Эдит»</span></label>
+      <label class="switch"><input type="checkbox" id="opt-speak" checked /><span>отвечать голосом</span></label>
+      <label class="switch"><input type="checkbox" id="opt-proactive" checked /><span>эдит пишет первой</span></label>
+      <label class="switch"><input type="checkbox" id="opt-eco" checked /><span>эко-режим (меньше анимаций, бережёт батарею)</span></label>
+    </div>
+  </section>
+
+  <!-- action confirmation -->
+  <section class="confirm" id="confirm" hidden></section>
+
+  <!-- one-line notices (mic permission etc.) -->
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- in-HUD windows -->
   <div id="stage" class="stage"></div>
 
-  <!-- boot sequence -->
-  <div id="boot" class="boot">
-    <div class="boot-brand">EDITH</div>
-    <div class="boot-lines" id="boot-lines"></div>
+  <div class="boot" id="boot" aria-hidden="true">
+    <div class="boot-name">E.D.I.T.H.</div>
+    <div class="boot-bar"><i></i></div>
   </div>
-
-  <main class="hud">
-    <!-- Central reactor -->
-    <section class="core">
-      <div class="reactor" id="reactor" data-state="idle">
-        <svg viewBox="0 0 300 300" class="rings">
-          <circle class="ring ring-outer" cx="150" cy="150" r="140" />
-          <circle class="ring ring-mid"   cx="150" cy="150" r="112" />
-          <circle class="ring ring-in"    cx="150" cy="150" r="84" />
-          <g class="ticks" id="ticks"></g>
-          <circle class="ring ring-dash"  cx="150" cy="150" r="128" />
-        </svg>
-        <div class="reactor-center">
-          <div class="brand">EDITH</div>
-          <div class="status" id="status">в сети</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Conversation -->
-    <section class="panel">
-      <header class="panel-head">
-        <span class="dot"></span>
-        <span id="model-label">EDITH · канал связи</span>
-        <label class="toggle" title="Эдит сама пишет первой">
-          <input type="checkbox" id="proactive" checked />
-          <span>инициатива</span>
-        </label>
-        <label class="toggle" title="Меньше анимаций — меньше расход батареи">
-          <input type="checkbox" id="power" />
-          <span>эко</span>
-        </label>
-      </header>
-
-      <div class="log" id="log"></div>
-
-      <div id="confirm-bar" class="confirm hidden"></div>
-
-      <form class="composer" id="composer">
-        <button type="button" id="mic" class="mic" title="Голос">
-          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>
-        </button>
-        <input id="input" type="text" autocomplete="off" placeholder="Говорите, босс…" />
-        <button type="submit" class="send" title="Отправить">
-          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 12 20 4l-4 16-4-7-8-1Z"/></svg>
-        </button>
-      </form>
-    </section>
-  </main>
 
   <script src="/edith.js"></script>
 </body>

@@ -87,11 +87,8 @@ export async function runAction(action) {
       return { ok: true };
 
     case 'screenshot': {
-      const file = path.join(os.tmpdir(), `edith-shot-${Date.now()}.png`);
-      await execp(`screencapture -x ${q(file)}`, { timeout: 15000 });
-      const data = await readFile(file);
-      await unlink(file).catch(() => {});
-      return { ok: true, image: data.toString('base64'), media_type: 'image/png' };
+      const shot = await captureScreen();
+      return { ok: true, image: shot.base64, media_type: shot.mediaType };
     }
 
     case 'type_text':
@@ -122,6 +119,28 @@ export async function runAction(action) {
 
     default:
       return { ok: false, error: `Неизвестное действие: ${action.name}` };
+  }
+}
+
+// Capture the screen as a small JPEG (long edge 1568 px, quality 60) so only a
+// few hundred KB go to the vision model. Needs the "Screen Recording"
+// permission for Terminal/node in macOS settings.
+export async function captureScreen() {
+  if (os.platform() !== 'darwin') throw new Error('Снимок экрана доступен только на macOS.');
+  const stamp = Date.now();
+  const png = path.join(os.tmpdir(), `edith-shot-${stamp}.png`);
+  const jpg = path.join(os.tmpdir(), `edith-shot-${stamp}.jpg`);
+  try {
+    await execp(`screencapture -x -C ${q(png)}`, { timeout: 15000 });
+    await execp(`sips -s format jpeg -s formatOptions 60 -Z 1568 ${q(png)} --out ${q(jpg)}`, { timeout: 15000 });
+    const data = await readFile(jpg);
+    if (data.length < 2000) throw new Error('пустой снимок');
+    return { base64: data.toString('base64'), mediaType: 'image/jpeg' };
+  } catch (e) {
+    throw new Error('Не удалось снять экран. Разрешите «Запись экрана» для Терминала: Системные настройки → Конфиденциальность и безопасность → Запись экрана. (' + e.message + ')');
+  } finally {
+    await unlink(png).catch(() => {});
+    await unlink(jpg).catch(() => {});
   }
 }
 
