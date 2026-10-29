@@ -85,7 +85,11 @@ async function streamPost(url, payload) {
   } catch (e) { showBanner('⚠ ' + e.message); }
   finally { finishCaption(liveText); }
 }
-function finishCaption(text) { busy = false; captionEl.classList.remove('cursor'); setState('idle', 'в режиме ожидания'); if (text) captionEl.textContent = text; }
+function finishCaption(text) {
+  busy = false; captionEl.classList.remove('cursor'); setState('idle', 'в режиме ожидания'); if (text) captionEl.textContent = text;
+  // hands-free: resume listening after the answer (speak() resumes it itself when it talks)
+  if (mode === 'wake' && !speaking && !(opts.speak && text)) setTimeout(startRec, 400);
+}
 
 // ---------- confirm ----------
 const confirmEl = $('#confirm');
@@ -168,14 +172,20 @@ async function speakViaMac(text) {
 }
 
 // ---------- voice input ----------
-// Browsers block the microphone until the user interacts with the page at least
-// once, so the mic turns on with a tap. After that, hands-free mode (wake word
-// "Эдит") keeps listening on its own.
+// Browsers block the microphone until the user interacts with the page once,
+// so the mic turns on with a tap. End of a phrase is detected by our own
+// silence timer (Chrome's "final" flag comes late or never in continuous mode),
+// so Эдит knows you've finished and goes to work.
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const micBtn = $('#mic'), micText = $('#mic-text');
-let rec = null, mode = 'off';          // 'off' | 'ptt' (tap-to-talk) | 'wake' (hands-free)
-let listening = false, awake = false, finalBuf = '', awakeTimer = null, commitTimer = null;
-const WAKE = /(эдит|edith|едит|эдис|эдди|едить)/i;
+const SILENCE_MS = 1300;      // pause that means "I'm done"
+const MAX_PHRASE_MS = 30000;  // safety cap for one phrase
+const WAKE_IDLE_MS = 8000;    // after "Эдит", wait this long for the command
+const WAKE = /(эдит|edith|едит|эдис|эдди|едить|идит)/i;
+
+let rec = null, mode = 'off';  // 'off' | 'ptt' (tap-to-talk) | 'wake' (hands-free)
+let listening = false, awake = false, committed = false;
+let heard = '', wakeAt = -1, silenceTimer = null, maxTimer = null, idleTimer = null;
 
 function micUI(state, label) { // state: off | on | rec
   micBtn.className = 'mic-big' + (state === 'rec' ? ' rec' : state === 'on' ? ' on' : '');
@@ -184,84 +194,150 @@ function micUI(state, label) { // state: off | on | rec
   statMic.querySelector('span').textContent = state === 'off' ? 'микрофон' : (state === 'rec' ? 'слушаю' : 'готов');
 }
 
+// short earcons: rising = "listening", falling = "got it"
+let audioCtx = null;
+function beep(freqs) {
+  try {
+    audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    let t = audioCtx.currentTime;
+    for (const f of freqs) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+      o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t + 0.13); t += 0.1;
+    }
+  } catch {}
+}
+const beepListen = () => beep([660, 880]);
+const beepDone = () => beep([880, 590]);
+
+// Speech recognition returns Russian without punctuation, so the model can't
+// tell a question from a statement. Add the sign from the phrase itself.
+const Q_START = /^(а\s+|и\s+|ну\s+|слушай,?\s+|скажи,?\s+)?(что|чего|чему|чем|как|какой|какая|какое|какие|каких|каким|какую|где|куда|откуда|когда|почему|зачем|отчего|кто|кого|кому|кем|сколько|чей|чья|чьё|чьи|можешь|можно|сможешь|умеешь|знаешь|помнишь|видишь|есть\s+ли|правда\s+ли|разве|неужели|what|how|why|where|when|who|can|is|are|do|does)(?=[\s,]|$)/i;
+const Q_LI = /(^|\s)ли(\s|$)/i;
+function punctuate(t) {
+  t = t.replace(/\s+/g, ' ').trim();
+  if (!t) return t;
+  t = t[0].toUpperCase() + t.slice(1);
+  if (/[.!?…]$/.test(t)) return t;
+  return t + (Q_START.test(t) || Q_LI.test(t) ? '?' : '.');
+}
+
+// the command part of what we heard: everything after the wake word (wake
+// mode) or everything (tap-to-talk)
+function commandText() {
+  const raw = mode === 'wake' ? (wakeAt >= 0 ? heard.slice(wakeAt) : '') : heard;
+  return raw.replace(/^[\s,.!?:;-]+/, '').trim();
+}
+
 if (!SR) { micUI('off', 'голос не работает (нужен Chrome)'); micBtn.disabled = true; }
 else {
-  rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true;
-  rec.continuous = true;
-  rec.onstart = () => { listening = true; micUI(mode === 'ptt' || awake ? 'rec' : 'on', mode === 'wake' && !awake ? 'слушаю фоном — скажите «Эдит»' : 'говорите…'); };
+  rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.maxAlternatives = 1;
+  rec.onstart = () => {
+    listening = true; committed = false; heard = ''; wakeAt = -1;
+    if (mode === 'ptt') { micUI('rec', 'говорите… (пауза — отправлю)'); setState('listening', 'слушаю, босс'); }
+    else if (mode === 'wake') micUI(awake ? 'rec' : 'on', awake ? 'слушаю, босс' : 'слушаю фоном — скажите «Эдит»');
+  };
   rec.onresult = (e) => {
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const t = e.results[i][0].transcript;
-      if (e.results[i].isFinal) handleFinal(t); else interim += t;
+    if (committed) return;
+    // rebuild the whole phrase of this session: finals + current interim
+    let full = '';
+    for (let i = 0; i < e.results.length; i++) full += e.results[i][0].transcript;
+    heard = full;
+
+    if (mode === 'wake' && !awake) {
+      const m = [...heard.matchAll(new RegExp(WAKE.source, 'gi'))].pop();
+      if (!m) return;
+      wakeUp(); wakeAt = m.index + m[0].length;
+    } else if (mode === 'wake' && wakeAt < 0) {
+      wakeAt = 0;
     }
-    if (interim) {
-      youEl.classList.add('active');
-      if (mode === 'ptt' || awake) { youEl.textContent = interim; setState('listening', 'слушаю, босс'); }
-      else if (WAKE.test(interim)) { wake(); }
-    }
+
+    const cmd = commandText();
+    youEl.classList.add('active');
+    youEl.textContent = cmd || '…';
+    if (!cmd) return;
+    clearTimeout(idleTimer);
+    // every new word restarts the silence timer
+    clearTimeout(silenceTimer);
+    silenceTimer = setTimeout(commit, SILENCE_MS);
+    if (!maxTimer) maxTimer = setTimeout(commit, MAX_PHRASE_MS);
   };
   rec.onerror = (e) => {
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
       mode = 'off'; listening = false; micUI('off', 'нет доступа к микрофону');
       showBanner('Нет доступа к микрофону. В Chrome нажмите значок замка слева от адреса → Микрофон → Разрешить, затем обновите страницу.', 'обновить', () => location.reload());
+    } else if (e.error === 'network') {
+      showBanner('Распознавание речи не может связаться с сервером Google. Проверьте интернет/VPN.');
     }
   };
   rec.onend = () => {
     listening = false;
-    // hands-free: keep it alive; tap-to-talk: stop after the utterance
-    if (mode === 'wake' && !speaking) { try { rec.start(); } catch {} }
-    else if (mode === 'ptt') { /* one utterance done */ if (!busy) micUI('off', 'нажмите, чтобы говорить'); }
+    // Chrome may end the session itself at a pause: treat it as "done"
+    if (!committed && commandText()) { commit(); return; }
+    if (mode === 'wake' && !speaking && !busy) { setTimeout(startRec, 200); return; }
+    if (mode === 'ptt') { mode = 'off'; if (!busy) micUI('off', 'нажмите, чтобы говорить'); setState(busy ? 'thinking' : 'idle', busy ? 'обработка' : 'в режиме ожидания'); }
   };
 }
 
-function startRec() { if (rec && !listening) { try { rec.start(); } catch {} } }
+function clearTimers() { clearTimeout(silenceTimer); clearTimeout(maxTimer); clearTimeout(idleTimer); silenceTimer = maxTimer = idleTimer = null; }
+
+function startRec() {
+  if (!rec || listening) return;
+  rec.continuous = mode === 'wake'; // tap-to-talk: one phrase per tap
+  try { rec.start(); } catch {}
+}
+
+function commit() {
+  if (committed) return;
+  const cmd = commandText();
+  committed = true; clearTimers(); awake = false;
+  try { rec.abort(); } catch {}
+  if (mode === 'ptt') mode = 'off';
+  if (cmd.length < 2) { micUI(mode === 'wake' ? 'on' : 'off', mode === 'wake' ? 'скажите «Эдит»' : 'нажмите, чтобы говорить'); return; }
+  beepDone();
+  micUI(mode === 'wake' ? 'on' : 'off', mode === 'wake' ? 'скажите «Эдит»' : 'нажмите, чтобы говорить');
+  send(punctuate(cmd));
+}
+
 function micPause(on) { // don't let Эдит hear herself
   if (!rec) return;
-  if (on) { try { rec.stop(); } catch {} }
-  else if (mode === 'wake') setTimeout(() => startRec(), 300);
-}
-function wake() {
-  awake = true; finalBuf = ''; micUI('rec', 'слушаю, босс'); setState('listening', 'слушаю, босс'); youEl.textContent = '';
-  clearTimeout(awakeTimer); awakeTimer = setTimeout(() => { awake = false; if (!busy) { setState('idle', 'в режиме ожидания'); micUI('on', 'скажите «Эдит»'); } }, 9000);
-}
-function handleFinal(text) {
-  const clean = text.trim(); if (!clean) return;
-  if (mode === 'wake' && !awake) {
-    if (WAKE.test(clean)) { wake(); const after = clean.replace(WAKE, '').replace(/^[,.\s]+/, '').trim(); if (after.length > 1) { finalBuf = after; commitSoon(); } }
-    return;
-  }
-  // ptt, or awake
-  finalBuf = (finalBuf ? finalBuf + ' ' : '') + clean.replace(WAKE, '').trim();
-  youEl.textContent = finalBuf;
-  commitSoon();
-}
-function commitSoon() {
-  clearTimeout(awakeTimer); clearTimeout(commitTimer);
-  commitTimer = setTimeout(() => {
-    const t = finalBuf.trim(); finalBuf = ''; awake = false;
-    if (mode === 'ptt') { mode = 'off'; try { rec.stop(); } catch {} }
-    if (t.length > 1) send(t);
-  }, 1100);
+  if (on) { try { rec.abort(); } catch {} }
+  else if (mode === 'wake') setTimeout(startRec, 350);
 }
 
-// tap the mic: start tap-to-talk right now (works on the very first tap)
+function wakeUp() {
+  awake = true; beepListen();
+  micUI('rec', 'слушаю, босс'); setState('listening', 'слушаю, босс'); youEl.textContent = '…';
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => { // said "Эдит" but nothing after it
+    if (committed || commandText()) return;
+    awake = false; wakeAt = -1;
+    try { rec.abort(); } catch {}
+    if (!busy) { setState('idle', 'в режиме ожидания'); micUI('on', 'скажите «Эдит»'); youEl.textContent = ''; }
+  }, WAKE_IDLE_MS);
+}
+
+// tap the mic: talk right now (works from the very first tap)
 micBtn.addEventListener('click', () => {
   if (!rec) return;
-  if (listening) { // stop / cancel
-    mode = 'off'; try { rec.stop(); } catch {} micUI('off', 'нажмите, чтобы говорить'); return;
+  if (listening && mode === 'ptt') { // tap again = "I'm done", send now
+    if (commandText()) commit(); else { mode = 'off'; try { rec.abort(); } catch {} micUI('off', 'нажмите, чтобы говорить'); }
+    return;
   }
-  mode = opts.wake ? 'wake' : 'ptt';
-  awake = mode === 'ptt'; // tap-to-talk is immediately active, no wake word needed
-  finalBuf = '';
-  startRec();
+  if (busy) return;
+  try { speechSynthesis.cancel(); } catch {}
+  try { rec.abort(); } catch {}
+  clearTimers();
+  mode = 'ptt'; awake = true; beepListen();
+  setTimeout(startRec, 120);
 });
 
-// hands-free toggle: enable continuous wake-word listening (still needs one
-// tap on the mic or this toggle as the first user gesture)
+// hands-free toggle: continuous wake-word listening (needs one tap on the page
+// first — browser rule)
 function setWakeMode(on) {
   if (on) { mode = 'wake'; awake = false; startRec(); micUI('on', 'скажите «Эдит»'); }
-  else { mode = 'off'; try { rec && rec.stop(); } catch {} micUI('off', 'нажмите, чтобы говорить'); }
+  else { mode = 'off'; clearTimers(); try { rec && rec.abort(); } catch {} micUI('off', 'нажмите, чтобы говорить'); }
 }
 
 // ---------- in-HUD windows ----------
