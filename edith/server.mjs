@@ -11,7 +11,7 @@ import { streamChat, describeImage, MODEL_LABEL, config, chain } from './lib/llm
 import { runAction, captureScreen, sayText as speakOnMac, hushText, describe, isSensitive, enabledActions } from './lib/computer.mjs';
 import { webSearch } from './lib/search.mjs';
 import { Proactive } from './lib/proactive.mjs';
-import { COMMS_TOOLS, COMMS_NAMES, PRIVATE_TOOLS, commsSensitive, commsDescribe, runComms, readNotifications, latestNotificationId, isPeopleApp, isImportant, FDA_HINT } from './lib/comms.mjs';
+import { commsTools, COMMS_NAMES, PRIVATE_TOOLS, commsSensitive, commsDescribe, runComms, readNotifications, latestNotificationId, isPeopleApp, isImportant, FDA_HINT } from './lib/comms.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // Settings from edith/.env apply even when started as plain `node server.mjs`.
@@ -44,7 +44,9 @@ const SYSTEM = `Ты — Эдит (EDITH), персональный ИИ-асс�
 - Отправляй (mail_send, imessage_send, whatsapp_send) только когда босс сам явно попросил отправить, и ровно то и тому, что он сказал. Перед отправкой интерфейс покажет боссу карточку — не проси подтверждения словами.
 - Если не уверена в адресате или тексте — переспроси, не угадывай. Для писем по умолчанию делай черновик (mail_draft), отправляй — если босс сказал «отправь».
 - Пересказывай коротко: кто, о чём, что важно. Не зачитывай вслух длинные личные сообщения целиком, если не просили.
-- Telegram, MAX, Яндекс Мессенджер, IMA, WhatsApp: новые входящие ты видишь через уведомления (notifications_read). Историю старых переписок в этих мессенджерах ты не видишь. Отправить можешь в WhatsApp (whatsapp_send), iMessage и почту; в Telegram, MAX, Яндекс Мессенджер и IMA — можешь открыть приложение или чат (messenger_open), отправляет босс.
+- Если доступны инструменты gmail_* — для почты используй их (это весь ящик Gmail), а не mail_*. Для поиска писем пиши запрос в синтаксисе Gmail. Отвечая на письмо, передавай reply_to_id.
+- Если доступны инструменты tg_* — это личный Telegram босса: ищи людей через tg_find, читай через tg_read, пиши через tg_send. Если по имени нашлось несколько чатов — спроси, какой.
+- Без tg_*: Telegram, MAX, Яндекс Мессенджер, IMA, WhatsApp: новые входящие ты видишь через уведомления (notifications_read). Историю старых переписок в этих мессенджерах ты не видишь. Отправить можешь в WhatsApp (whatsapp_send), iMessage и почту; в Telegram, MAX, Яндекс Мессенджер и IMA — можешь открыть приложение или чат (messenger_open), отправляет босс.
 
 Если босс спрашивает, что ты умеешь, или кажется растерянным, коротко перечисли возможности с примерами фраз:
 - отвечать на вопросы и болтать («сколько будет 15% от 3400?»);
@@ -56,7 +58,7 @@ const SYSTEM = `Ты — Эдит (EDITH), персональный ИИ-асс�
 - отправлять iMessage, письма и сообщения в WhatsApp — только с подтверждением босса;
 - печатать текст и нажимать клавиши на Mac — с подтверждением;
 - показывать сайт, заметку или картинку в своём окне, напоминать о перерыве.
-Честно скажи, чего пока не умеешь: звонить, отправлять в Telegram/MAX/Яндекс Мессенджер/IMA за босса, читать старую историю этих мессенджеров, запоминать разговоры после перезапуска.`;
+Честно скажи, чего пока не умеешь: звонить; читать историю и писать в MAX, Яндекс Мессенджер, IMA и Instagram (только видишь новые через уведомления); писать в Telegram и искать по всей почте — пока босс их не подключил командой connect; запоминать разговоры после перезапуска.`;
 
 // --- tool definitions (OpenAI function-calling format) ---------------------
 const fn = (name, description, properties, required = []) => ({
@@ -103,7 +105,7 @@ function tools() {
   list.push(...Object.values(HUD_TOOLS));
   if (process.env.EDITH_WEBSEARCH !== '0') list.push(SEARCH_TOOL);
   if (process.env.EDITH_SCREEN !== '0') list.push(SCREEN_TOOL);
-  if (process.env.EDITH_COMMS !== '0') list.push(...COMMS_TOOLS);
+  if (process.env.EDITH_COMMS !== '0') list.push(...commsTools());
   return list;
 }
 

@@ -20,6 +20,15 @@ if [ -d "/Applications/Ollama.app" ] && ! up "http://localhost:11434/api/version
   for _ in $(seq 1 20); do up "http://localhost:11434/api/version" && break; sleep 0.5; done
 fi
 
+# 1b) Библиотеки почты и Telegram: поставить, если их нет или версия изменилась
+if [ -f "$DIR/package-lock.json" ] && command -v npm >/dev/null 2>&1; then
+  STAMP="$(shasum "$DIR/package-lock.json" | cut -d' ' -f1)"
+  if [ ! -d "$DIR/node_modules" ] || [ "$(cat "$DIR/node_modules/.edith-stamp" 2>/dev/null)" != "$STAMP" ]; then
+    (cd "$DIR" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund >"$DIR/npm.log" 2>&1) \
+      && echo "$STAMP" > "$DIR/node_modules/.edith-stamp"
+  fi
+fi
+
 # 2) Эдит — если ещё не запущена, поднять в фоне
 if ! up "$URL"; then
   if ! command -v node >/dev/null 2>&1; then

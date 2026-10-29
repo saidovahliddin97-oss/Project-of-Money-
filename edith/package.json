@@ -1,0 +1,13 @@
+{
+  "name": "edith",
+  "private": true,
+  "type": "module",
+  "description": "EDITH — local AI assistant (server + HUD). Optional deps: Gmail (IMAP/SMTP) and Telegram (official API).",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "imapflow": "2.4.3",
+    "mailparser": "3.9.39",
+    "nodemailer": "10.1.1",
+    "telegram": "2.26.22"
+  }
+}

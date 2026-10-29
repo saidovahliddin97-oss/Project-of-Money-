@@ -46,9 +46,12 @@ clockEl.textContent = hhmm();
 // ---------- chat panel ----------
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// Models sometimes leak JSON escapes: \"Почта\", \n. Show and say them as plain text.
+const unescapeModel = (t) => String(t || '').replace(/\\n/g, '\n').replace(/\\t/g, ' ').replace(/\\(["'`\\/])/g, '$1');
+
 // Small, safe markdown: escape first, then bold, code, links, lists, paragraphs.
 function renderMd(text) {
-  const lines = esc(text).split('\n');
+  const lines = esc(unescapeModel(text)).split('\n');
   let html = '', list = false;
   const inline = (s) => s
     .replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -177,7 +180,7 @@ composer.addEventListener('submit', (e) => { e.preventDefault(); send(input.valu
 // Turn a written answer into something that sounds natural when spoken:
 // no markdown, slashes, links, emoji or list markers.
 function speakable(t) {
-  return String(t || '')
+  return unescapeModel(t)
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]*)`/g, '$1')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
