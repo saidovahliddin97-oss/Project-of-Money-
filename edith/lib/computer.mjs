@@ -5,7 +5,7 @@
 // (osascript, open, screencapture, say) plus optional cliclick for precise
 // mouse/keyboard. Nothing here runs without the local user's machine and key.
 
-import { exec } from 'node:child_process';
+import { exec, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import os from 'node:os';
 import path from 'node:path';
@@ -123,15 +123,29 @@ export async function runAction(action) {
 }
 
 // Speak text with the Mac's own TTS (`say`), using the system default voice or
-// EDITH_SAY_VOICE. This is the highest-quality local voice (your chosen
-// system/enhanced voice), unlike the browser's built-in voices.
-export async function sayText(text) {
-  if (os.platform() !== 'darwin') return; // only on macOS
-  const clean = (text || '').replace(/[`$"\\]/g, ' ').trim();
-  if (!clean) return;
-  const voice = process.env.EDITH_SAY_VOICE;
-  const vArg = voice ? `-v ${q(voice)} ` : '';
-  await execp(`say ${vArg}-r ${Number(process.env.EDITH_SAY_RATE) || 185} ${q(clean)}`, { timeout: 60000 });
+// EDITH_SAY_VOICE. Runs without a shell (no quoting issues) and can be cut off
+// at once with hushText() — that's how the boss interrupts her.
+let sayProc = null;
+export function sayText(text) {
+  if (os.platform() !== 'darwin') return Promise.resolve(); // only on macOS
+  const clean = String(text || '').trim();
+  if (!clean) return Promise.resolve();
+  hushText();
+  const args = [];
+  if (process.env.EDITH_SAY_VOICE) args.push('-v', process.env.EDITH_SAY_VOICE);
+  args.push('-r', String(Number(process.env.EDITH_SAY_RATE) || 185), '--', clean);
+  return new Promise((resolve, reject) => {
+    const p = spawn('say', args, { stdio: 'ignore' });
+    sayProc = p;
+    p.on('error', (e) => { if (sayProc === p) sayProc = null; reject(e); });
+    p.on('exit', (code, signal) => {
+      if (sayProc === p) sayProc = null;
+      if (code === 0 || signal) resolve(); else reject(new Error(`say завершился с кодом ${code}`));
+    });
+  });
+}
+export function hushText() {
+  if (sayProc) { try { sayProc.kill('SIGTERM'); } catch {} sayProc = null; }
 }
 
 // Capture the screen as a small JPEG (long edge 1568 px, quality 60) so only a

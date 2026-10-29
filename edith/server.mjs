@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { streamChat, describeImage, MODEL_LABEL, config, chain } from './lib/llm.mjs';
-import { runAction, captureScreen, sayText as speakOnMac, describe, isSensitive, enabledActions } from './lib/computer.mjs';
+import { runAction, captureScreen, sayText as speakOnMac, hushText, describe, isSensitive, enabledActions } from './lib/computer.mjs';
 import { webSearch } from './lib/search.mjs';
 import { Proactive } from './lib/proactive.mjs';
 
@@ -209,6 +209,13 @@ async function readBody(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return {}; }
 }
 
+// Only answer requests addressed to this machine by name (blocks DNS-rebinding:
+// a site that points its own domain at 127.0.0.1 still sends its domain as Host).
+function localHost(req) {
+  const host = String(req.headers.host || '').replace(/:\d+$/, '').toLowerCase();
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+}
+
 function sameOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
@@ -236,6 +243,7 @@ async function serveStatic(req, res) {
 const server = http.createServer(async (req, res) => {
   const url = req.url.split('?')[0];
   try {
+    if (!localHost(req)) { res.writeHead(403).end(); return; }
     if (req.method === 'POST' && !sameOrigin(req)) {
       res.writeHead(403, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'cross-origin запрещён' }));
@@ -275,6 +283,8 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === 'POST' && url === '/api/hush') { hushText(); res.writeHead(204).end(); return; }
+
     if (req.method === 'POST' && url === '/api/beat') { proactive.touch('beat'); res.writeHead(204).end(); return; }
 
     if (req.method === 'POST' && url === '/api/proactive') {
@@ -308,7 +318,7 @@ setInterval(async () => {
   for (const res of eventClients) { try { sse(res, { type: 'proactive', text: line }); } catch {} }
 }, 60 * 1000);
 
-server.listen(PORT, () => {
+server.listen(PORT, '127.0.0.1', () => {
   const list = chain().map((p) => p.id);
   const c = config();
   const note = c.provider === 'ollama' && /-cloud$/.test(c.model) ? 'облако — Mac почти не нагружается' : '';

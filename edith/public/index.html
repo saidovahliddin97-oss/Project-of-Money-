@@ -21,64 +21,62 @@
       <span class="stat" id="stat-brain" title="Активная модель"><i class="led"></i><span id="brain-label">мозг</span></span>
       <span class="stat" id="stat-batt" hidden><span id="batt-label"></span></span>
       <span class="stat clock" id="clock">--:--</span>
-      <button class="icon-btn" id="btn-log" title="История" aria-label="История">
-        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-      </button>
       <button class="icon-btn" id="btn-settings" title="Настройки" aria-label="Настройки">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>
       </button>
     </div>
   </header>
 
-  <!-- center: the core, live transcript, cinematic caption -->
-  <main class="center">
-    <div class="core" id="core" data-state="idle">
-      <svg viewBox="0 0 400 400" aria-hidden="true">
-        <defs>
-          <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#9eeeff" stop-opacity=".55"/>
-            <stop offset="45%" stop-color="#3fd6ff" stop-opacity=".12"/>
-            <stop offset="100%" stop-color="#3fd6ff" stop-opacity="0"/>
-          </radialGradient>
-        </defs>
-        <circle class="c-glow" cx="200" cy="200" r="120" fill="url(#glow)"/>
-        <g class="c-outer"><circle cx="200" cy="200" r="182"/></g>
-        <g class="c-ticks" id="ticks"></g>
-        <g class="c-arcs-a"><circle cx="200" cy="200" r="150"/></g>
-        <g class="c-arcs-b"><circle cx="200" cy="200" r="132"/></g>
-        <g class="c-inner"><circle cx="200" cy="200" r="96"/></g>
-        <circle class="c-heart" cx="200" cy="200" r="54"/>
-        <circle class="c-dot" cx="200" cy="200" r="4"/>
-      </svg>
-      <div class="core-label" id="core-label">в режиме ожидания</div>
-    </div>
+  <!-- left: the core and the mic; right: the conversation -->
+  <main class="layout">
+    <section class="side">
+      <div class="core" id="core" data-state="idle">
+        <svg viewBox="0 0 400 400" aria-hidden="true">
+          <defs>
+            <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#9eeeff" stop-opacity=".55"/>
+              <stop offset="45%" stop-color="#3fd6ff" stop-opacity=".12"/>
+              <stop offset="100%" stop-color="#3fd6ff" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+          <circle class="c-glow" cx="200" cy="200" r="120" fill="url(#glow)"/>
+          <g class="c-outer"><circle cx="200" cy="200" r="182"/></g>
+          <g class="c-ticks" id="ticks"></g>
+          <g class="c-arcs-a"><circle cx="200" cy="200" r="150"/></g>
+          <g class="c-arcs-b"><circle cx="200" cy="200" r="132"/></g>
+          <g class="c-inner"><circle cx="200" cy="200" r="96"/></g>
+          <circle class="c-heart" cx="200" cy="200" r="54"/>
+          <circle class="c-dot" cx="200" cy="200" r="4"/>
+        </svg>
+        <div class="core-label" id="core-label">в режиме ожидания</div>
+      </div>
 
-    <div class="you" id="you" aria-live="polite"></div>
-    <div class="caption" id="caption" aria-live="polite"></div>
-    <div class="hint" id="hint">Нажмите микрофон, скажите фразу и замолчите на секунду — Эдит поймёт, что вы закончили.<br/>Попробуйте: «Что ты умеешь?», «Найди курс доллара», «Что у меня на экране?», «Открой Telegram».</div>
+      <div class="you" id="you" aria-live="polite"></div>
 
-    <button class="mic-big" id="mic" type="button" aria-label="Говорить">
-      <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>
-      <span id="mic-text">нажмите, чтобы говорить</span>
-    </button>
+      <button class="mic-big" id="mic" type="button" aria-label="Говорить">
+        <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>
+        <span id="mic-text">нажмите, чтобы говорить</span>
+      </button>
+      <div class="hint" id="hint">Скажите фразу и замолчите на секунду — Эдит поймёт, что вы закончили. Чтобы перебить её, скажите «Эдит».</div>
+    </section>
+
+    <section class="chat" aria-label="Диалог">
+      <header class="chat-head">
+        <span class="chat-dot"></span><span>диалог</span>
+        <button class="icon-btn small" id="btn-clear" title="Новый разговор" aria-label="Новый разговор">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+        </button>
+      </header>
+      <div class="log" id="log" aria-live="polite"></div>
+      <section class="confirm" id="confirm" hidden></section>
+      <form class="composer" id="composer" autocomplete="off">
+        <input id="input" type="text" placeholder="Напишите Эдит…" />
+        <button type="submit" class="icon-btn" title="Отправить" aria-label="Отправить">
+          <svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </button>
+      </form>
+    </section>
   </main>
-
-  <!-- typing fallback -->
-  <form class="composer" id="composer" autocomplete="off">
-    <input id="input" type="text" placeholder="или напишите…" />
-    <button type="submit" class="icon-btn" title="Отправить" aria-label="Отправить">
-      <svg viewBox="0 0 24 24"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
-    </button>
-  </form>
-
-  <!-- history drawer -->
-  <aside class="drawer" id="drawer" aria-label="История">
-    <div class="drawer-head">
-      <span>журнал</span>
-      <button class="icon-btn" id="btn-log-close" aria-label="Закрыть"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    </div>
-    <div class="log" id="log"></div>
-  </aside>
 
   <!-- settings sheet -->
   <section class="sheet" id="settings" hidden>
@@ -102,9 +100,6 @@
       <label class="switch"><input type="checkbox" id="opt-eco" checked /><span>эко-режим (меньше анимаций, бережёт батарею)</span></label>
     </div>
   </section>
-
-  <!-- action confirmation -->
-  <section class="confirm" id="confirm" hidden></section>
 
   <!-- one-line notices (mic permission etc.) -->
   <div class="banner" id="banner" hidden></div>

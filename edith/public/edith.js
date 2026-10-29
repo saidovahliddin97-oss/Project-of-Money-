@@ -1,10 +1,10 @@
-// E.D.I.T.H. — HUD logic: hands-free voice, wake word, female voice,
-// live screen awareness, streaming chat, in-HUD windows, proactive channel.
+// E.D.I.T.H. — HUD logic: chat panel, voice in/out, barge-in by "Эдит",
+// live screen awareness, in-HUD windows, proactive channel.
 'use strict';
 const $ = (s) => document.querySelector(s);
 
 const core = $('#core'), coreLabel = $('#core-label');
-const youEl = $('#you'), captionEl = $('#caption'), hintEl = $('#hint');
+const youEl = $('#you'), hintEl = $('#hint');
 const log = $('#log'), input = $('#input'), composer = $('#composer');
 const stage = $('#stage'), banner = $('#banner');
 const brainLabel = $('#brain-label'), clockEl = $('#clock');
@@ -12,6 +12,7 @@ const statMic = $('#stat-mic'), statBrain = $('#stat-brain');
 
 let messages = [];
 let busy = false;
+let currentReq = null;   // AbortController of the running answer
 const opts = loadOpts();
 
 // ---------- settings persistence ----------
@@ -25,8 +26,9 @@ function saveOpts() { try { localStorage.setItem('edith-opts', JSON.stringify(op
 function setState(s, label) { core.dataset.state = s; if (label) coreLabel.textContent = label; }
 
 // ---------- clock ----------
-setInterval(() => { clockEl.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); }, 1000);
-clockEl.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const hhmm = (d = new Date()) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+setInterval(() => { clockEl.textContent = hhmm(); }, 1000);
+clockEl.textContent = hhmm();
 
 // ---------- core ticks ----------
 (() => {
@@ -41,14 +43,50 @@ clockEl.textContent = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', 
   }
 })();
 
-// ---------- history log ----------
-function addLog(role, text, cls) {
+// ---------- chat panel ----------
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// Small, safe markdown: escape first, then bold, code, links, lists, paragraphs.
+function renderMd(text) {
+  const lines = esc(text).split('\n');
+  let html = '', list = false;
+  const inline = (s) => s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+  for (const raw of lines) {
+    const line = raw.trim();
+    const item = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
+    if (item) { if (!list) { html += '<ul>'; list = true; } html += `<li>${inline(item[1])}</li>`; continue; }
+    if (list) { html += '</ul>'; list = false; }
+    if (line) html += `<p>${inline(line.replace(/^#+\s*/, ''))}</p>`;
+  }
+  if (list) html += '</ul>';
+  return html;
+}
+
+function addMsg(role, text, extra = '') {
   const el = document.createElement('div');
-  el.className = `msg ${cls || role}`;
-  el.textContent = text;
+  el.className = `msg ${role} ${extra}`.trim();
+  if (role !== 'sys') {
+    const who = document.createElement('div'); who.className = 'who';
+    who.innerHTML = `<span>${role === 'user' ? 'вы' : 'эдит'}</span><time>${hhmm()}</time>`;
+    el.appendChild(who);
+  }
+  const body = document.createElement('div'); body.className = 'body';
+  if (role === 'edith') body.innerHTML = renderMd(text); else body.textContent = text;
+  el.appendChild(body);
   log.appendChild(el); log.scrollTop = log.scrollHeight;
   return el;
 }
+const sysMsg = (text, extra) => addMsg('sys', text, extra);
+
+$('#btn-clear').onclick = () => {
+  stopSpeaking(); if (currentReq) currentReq.abort();
+  messages = []; log.innerHTML = '';
+  addMsg('edith', 'Начнём с чистого листа, босс.');
+};
 
 // ---------- banner ----------
 function showBanner(text, actionLabel, onAction) {
@@ -61,10 +99,12 @@ function showBanner(text, actionLabel, onAction) {
 
 // ---------- streaming request (chat + confirm) ----------
 async function streamPost(url, payload) {
-  busy = true; setState('thinking', 'обработка'); captionEl.classList.add('cursor');
-  let liveText = '';
+  busy = true; setState('thinking', 'думаю');
+  currentReq = new AbortController();
+  let liveText = '', bubble = null;
+  const ensureBubble = () => { if (!bubble) { bubble = addMsg('edith', '', 'typing'); } return bubble; };
   try {
-    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload), signal: currentReq.signal });
     const reader = res.body.getReader(), dec = new TextDecoder();
     let buf = '';
     for (;;) {
@@ -74,21 +114,31 @@ async function streamPost(url, payload) {
       for (const part of parts) {
         const line = part.split('\n').find((l) => l.startsWith('data:')); if (!line) continue;
         const ev = JSON.parse(line.slice(5).trim());
-        if (ev.type === 'text') { liveText += ev.delta; captionEl.textContent = liveText; setState('speaking', 'ответ'); }
+        if (ev.type === 'text') {
+          liveText += ev.delta;
+          ensureBubble().querySelector('.body').innerHTML = renderMd(liveText);
+          log.scrollTop = log.scrollHeight;
+          setState('speaking', 'отвечаю');
+        }
         else if (ev.type === 'status') { coreLabel.textContent = ev.text; }
         else if (ev.type === 'panel') { if (ev.op === 'close_all') stage.innerHTML = ''; else openWindow(ev.window); }
-        else if (ev.type === 'confirm') { messages = ev.messages; finishCaption(liveText); showConfirm(ev.actions); return; }
-        else if (ev.type === 'done') { messages = ev.messages; finishCaption(liveText); if (liveText) addLog('edith', liveText); speak(liveText); return; }
-        else if (ev.type === 'error') { finishCaption(''); showBanner('⚠ ' + ev.error); addLog('sys', ev.error, 'sys'); return; }
+        else if (ev.type === 'confirm') { messages = ev.messages; showConfirm(ev.actions); return finish(bubble, liveText, false); }
+        else if (ev.type === 'done') { messages = ev.messages; return finish(bubble, liveText, true); }
+        else if (ev.type === 'error') { sysMsg('⚠ ' + ev.error, 'err'); return finish(bubble, liveText, false); }
       }
     }
-  } catch (e) { showBanner('⚠ ' + e.message); }
-  finally { finishCaption(liveText); }
+  } catch (e) {
+    if (e.name !== 'AbortError') sysMsg('⚠ ' + e.message, 'err');
+  }
+  finish(bubble, liveText, false);
 }
-function finishCaption(text) {
-  busy = false; captionEl.classList.remove('cursor'); setState('idle', 'в режиме ожидания'); if (text) captionEl.textContent = text;
-  // hands-free: resume listening after the answer (speak() resumes it itself when it talks)
-  if (mode === 'wake' && !speaking && !(opts.speak && text)) setTimeout(startRec, 400);
+function finish(bubble, text, say) {
+  if (!busy) return;
+  busy = false; currentReq = null;
+  if (bubble) { bubble.classList.remove('typing'); if (!text) bubble.remove(); }
+  setState('idle', 'в режиме ожидания');
+  if (say && text) speak(text);
+  else if (mode === 'wake') setTimeout(startRec, 400); // hands-free: keep listening
 }
 
 // ---------- confirm ----------
@@ -96,24 +146,26 @@ const confirmEl = $('#confirm');
 function showConfirm(actions) {
   const sensitive = actions.filter((a) => a.sensitive);
   confirmEl.innerHTML = '<div class="ask">Эдит хочет выполнить действие на Mac:</div>';
-  for (const a of actions) { const d = document.createElement('div'); d.className = 'act'; d.innerHTML = `• <code>${a.name}</code> — ${esc(a.desc)}`; confirmEl.appendChild(d); }
+  for (const a of actions) { const d = document.createElement('div'); d.className = 'act'; d.innerHTML = `• <code>${esc(a.name)}</code> — ${esc(a.desc)}`; confirmEl.appendChild(d); }
   const row = document.createElement('div'); row.className = 'buttons';
   const yes = document.createElement('button'); yes.className = 'btn'; yes.textContent = 'разрешить';
   const no = document.createElement('button'); no.className = 'btn warn'; no.textContent = 'отклонить';
   row.append(yes, no); confirmEl.appendChild(row); confirmEl.hidden = false;
-  const done = (ok) => { confirmEl.hidden = true; const approvals = {}; for (const a of sensitive) approvals[a.id] = ok; addLog('sys', ok ? 'Разрешено.' : 'Отклонено.', 'sys'); streamPost('/api/confirm', { messages, approvals }); };
+  log.scrollTop = log.scrollHeight;
+  const done = (ok) => { confirmEl.hidden = true; const approvals = {}; for (const a of sensitive) approvals[a.id] = ok; sysMsg(ok ? 'Разрешено.' : 'Отклонено.'); streamPost('/api/confirm', { messages, approvals }); };
   yes.onclick = () => done(true); no.onclick = () => done(false);
 }
-const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 // ---------- send ----------
 // only glance at the screen when the message is actually about it — keeps
 // normal chat fast (a vision round-trip adds several seconds)
-const SCREEN_WORDS = /(экран|вид(ишь|ел|но)|сейчас на|что (у меня |тут |здесь )?(на|в)|открыт|слева|справа|сверху|снизу|в углу|в центре|кнопк|надпис|这|screen|что это|что показ|прочти|прочитай|смотр)/i;
+const SCREEN_WORDS = /(экран|вид(ишь|ел|но)|сейчас на|что (у меня |тут |здесь )?(на|в)|открыт|слева|справа|сверху|снизу|в углу|в центре|кнопк|надпис|screen|что это|что показ|прочти|прочитай|смотр)/i;
 async function send(text) {
-  text = (text || '').trim(); if (!text || busy) return;
-  youEl.textContent = text; youEl.classList.remove('active'); hintEl.style.display = 'none';
-  addLog('user', text);
+  text = (text || '').trim(); if (!text) return;
+  if (busy) { if (currentReq) currentReq.abort(); busy = false; } // new request replaces the old one
+  stopSpeaking();
+  youEl.textContent = ''; youEl.classList.remove('active');
+  addMsg('user', text);
   messages.push({ role: 'user', content: text });
   input.value = '';
   const eyes = opts.eyes && SCREEN_WORDS.test(text);
@@ -122,9 +174,30 @@ async function send(text) {
 composer.addEventListener('submit', (e) => { e.preventDefault(); send(input.value); });
 
 // ---------- voice output ----------
-// Two paths: the Mac's own voice via `say` on the server (best quality, uses
-// your system/Siri voice) or the browser's built-in voices.
-let voices = [], chosenVoice = null, speaking = false;
+// Turn a written answer into something that sounds natural when spoken:
+// no markdown, slashes, links, emoji or list markers.
+function speakable(t) {
+  return String(t || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/(https?:\/\/|www\.)\S+/gi, ' ')
+    .replace(/^\s*#+\s*/gm, '')
+    .replace(/^\s*(?:[-*•]|\d+[.)])\s+/gm, '')
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '')
+    .replace(/\s*[—–]\s*/g, ', ')
+    .replace(/[*_~#>|\\/{}[\]<>^=+]+/g, ' ')
+    .replace(/(^|[\s,])эдит(?=[\s,.!?]|$)/gi, '$1')   // never say her own name: it is the barge-in word
+    .replace(/\n{2,}/g, '. ').replace(/\n/g, ', ')
+    .replace(/\s+([,.!?;:])/g, '$1')
+    .replace(/([,.!?;:])(?:\s*[,.;:])+/g, '$1')
+    .replace(/^[\s,.;:]+/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+let voices = [], chosenVoice = null, speaking = false, speechId = 0;
 const FEMALE_RU = /(Milena|Katya|Katerina|Alena|Yuliya|Polina|Google русский|Russian Female|Женск|Siri)/i;
 const FEMALE_ANY = /(female|woman|Samantha|Karen|Moira|Tessa|Serena|Victoria|Zira|Jenny|Aria|Siri)/i;
 function loadVoices() {
@@ -147,35 +220,48 @@ function loadVoices() {
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 
 function speak(text) {
-  if (!opts.speak || !text) return;
-  if (opts.saymac) { speakViaMac(text); return; }
-  speakViaBrowser(text);
+  const clean = speakable(text);
+  if (!opts.speak || !clean) { if (mode === 'wake') setTimeout(startRec, 400); return; }
+  stopSpeaking();
+  const id = ++speechId;
+  onSpeakStart();
+  const end = () => { if (id === speechId) onSpeakEnd(); };
+  if (opts.saymac) speakViaMac(clean, id, end);
+  else speakViaBrowser(clean, id, end);
 }
-function speakViaBrowser(text) {
-  if (!('speechSynthesis' in window)) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text.replace(/\s+/g, ' ').slice(0, 700));
-    u.lang = 'ru-RU'; if (chosenVoice) u.voice = chosenVoice; u.rate = 1.0; u.pitch = 1.05;
-    u.onstart = () => { speaking = true; micPause(true); };
-    u.onend = () => { speaking = false; micPause(false); };
+// browser voice: sentence by sentence — natural pauses, and Chrome doesn't cut long text
+function speakViaBrowser(text, id, end) {
+  if (!('speechSynthesis' in window)) { end(); return; }
+  const parts = text.match(/[^.!?…]+[.!?…]*/g) || [text];
+  parts.forEach((p, i) => {
+    const u = new SpeechSynthesisUtterance(p.trim());
+    u.lang = 'ru-RU'; if (chosenVoice) u.voice = chosenVoice; u.rate = 1.02; u.pitch = 1.05;
+    if (i === parts.length - 1) { u.onend = end; u.onerror = end; }
     speechSynthesis.speak(u);
-  } catch {}
+  });
 }
-async function speakViaMac(text) {
-  speaking = true; micPause(true);
+async function speakViaMac(text, id, end) {
   try {
-    const r = await fetch('/api/say', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 700) }) });
-    if (!r.ok) { speaking = false; micPause(false); speakViaBrowser(text); return; } // say failed → browser voice
-  } catch { speaking = false; micPause(false); speakViaBrowser(text); return; }
-  speaking = false; micPause(false);
+    const r = await fetch('/api/say', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 1200) }) });
+    if (!r.ok && id === speechId) { speakViaBrowser(text, id, end); return; } // say failed → browser voice
+  } catch { if (id === speechId) { speakViaBrowser(text, id, end); return; } }
+  end();
+}
+// stop talking right now (barge-in, new question, clear)
+function stopSpeaking() {
+  if (!speaking) return;
+  speechId++;
+  speaking = false;
+  try { speechSynthesis.cancel(); } catch {}
+  if (opts.saymac) fetch('/api/hush', { method: 'POST' }).catch(() => {});
+  setState('idle', 'в режиме ожидания');
 }
 
 // ---------- voice input ----------
 // Browsers block the microphone until the user interacts with the page once,
 // so the mic turns on with a tap. End of a phrase is detected by our own
-// silence timer (Chrome's "final" flag comes late or never in continuous mode),
-// so Эдит knows you've finished and goes to work.
+// silence timer (Chrome's "final" flag comes late or never in continuous mode).
+// While Эдит speaks, the mic listens only for "Эдит" — saying it interrupts her.
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const micBtn = $('#mic'), micText = $('#mic-text');
 const SILENCE_MS = 1300;      // pause that means "I'm done"
@@ -183,8 +269,9 @@ const MAX_PHRASE_MS = 30000;  // safety cap for one phrase
 const WAKE_IDLE_MS = 8000;    // after "Эдит", wait this long for the command
 const WAKE = /(эдит|edith|едит|эдис|эдди|едить|идит)/i;
 
-let rec = null, mode = 'off';  // 'off' | 'ptt' (tap-to-talk) | 'wake' (hands-free)
-let listening = false, awake = false, committed = false;
+let rec = null, mode = 'off';  // 'off' | 'ptt' (tap-to-talk) | 'wake' (listen for "Эдит")
+let listening = false, awake = false, committed = false, micGranted = false;
+let barge = null;              // { saved } while listening for "Эдит" during speech
 let heard = '', wakeAt = -1, silenceTimer = null, maxTimer = null, idleTimer = null;
 
 function micUI(state, label) { // state: off | on | rec
@@ -192,6 +279,11 @@ function micUI(state, label) { // state: off | on | rec
   if (label) micText.textContent = label;
   statMic.className = 'stat ' + (state === 'rec' ? 'live' : state === 'on' ? 'on' : '');
   statMic.querySelector('span').textContent = state === 'off' ? 'микрофон' : (state === 'rec' ? 'слушаю' : 'готов');
+}
+function idleMicUI() {
+  if (mode === 'wake' && !barge) micUI('on', 'скажите «Эдит»');
+  else if (speaking && barge) micUI('on', 'скажите «Эдит», чтобы перебить');
+  else micUI('off', 'нажмите, чтобы говорить');
 }
 
 // short earcons: rising = "listening", falling = "got it"
@@ -213,14 +305,22 @@ const beepDone = () => beep([880, 590]);
 
 // Speech recognition returns Russian without punctuation, so the model can't
 // tell a question from a statement. Add the sign from the phrase itself.
-const Q_START = /^(а\s+|и\s+|ну\s+|слушай,?\s+|скажи,?\s+)?(что|чего|чему|чем|как|какой|какая|какое|какие|каких|каким|какую|где|куда|откуда|когда|почему|зачем|отчего|кто|кого|кому|кем|сколько|чей|чья|чьё|чьи|можешь|можно|сможешь|умеешь|знаешь|помнишь|видишь|есть\s+ли|правда\s+ли|разве|неужели|what|how|why|where|when|who|can|is|are|do|does)(?=[\s,]|$)/i;
+// Leading fillers/greetings are skipped before looking for a question word:
+// «привет, как дела», «слушай, а где…», «окей, сколько…».
+const FILLER = /^(?:привет|здравствуй(?:те)?|добрый\s+(?:день|вечер|утро)|доброе\s+утро|эй|слушай(?:те)?|скажи(?:те)?|подскажи(?:те)?|босс|а|и|ну|так|ок|окей|хорошо|кстати|извини(?:те)?|прости|пожалуйста)[\s,.!]+/i;
+const Q_WORD = /^(?:(?:ты|вы)\s+(?:умеешь|умеете|можешь|можете|сможешь|сможете|знаешь|знаете|помнишь|помните|видишь|видите)|который|которая|которое|какого|что|чего|чему|чем|как|какой|какая|какое|какие|каких|каким|какую|где|куда|откуда|когда|почему|зачем|отчего|кто|кого|кому|кем|сколько|чей|чья|чьё|чьи|можешь|можно|сможешь|умеешь|знаешь|помнишь|видишь|есть\s+ли|правда\s+ли|разве|неужели|what|how|why|where|when|who|can|is|are|do|does)(?=[\s,]|$)/i;
 const Q_LI = /(^|\s)ли(\s|$)/i;
+function isQuestion(t) {
+  let s = t.toLowerCase();
+  for (let i = 0; i < 4 && FILLER.test(s); i++) s = s.replace(FILLER, '');
+  return Q_WORD.test(s) || Q_LI.test(s) || /(^|\s)как\s+дела(\s|$)/.test(s);
+}
 function punctuate(t) {
   t = t.replace(/\s+/g, ' ').trim();
   if (!t) return t;
   t = t[0].toUpperCase() + t.slice(1);
   if (/[.!?…]$/.test(t)) return t;
-  return t + (Q_START.test(t) || Q_LI.test(t) ? '?' : '.');
+  return t + (isQuestion(t) ? '?' : '.');
 }
 
 // the command part of what we heard: everything after the wake word (wake
@@ -234,9 +334,9 @@ if (!SR) { micUI('off', 'голос не работает (нужен Chrome)');
 else {
   rec = new SR(); rec.lang = 'ru-RU'; rec.interimResults = true; rec.maxAlternatives = 1;
   rec.onstart = () => {
-    listening = true; committed = false; heard = ''; wakeAt = -1;
-    if (mode === 'ptt') { micUI('rec', 'говорите… (пауза — отправлю)'); setState('listening', 'слушаю, босс'); }
-    else if (mode === 'wake') micUI(awake ? 'rec' : 'on', awake ? 'слушаю, босс' : 'слушаю фоном — скажите «Эдит»');
+    listening = true; micGranted = true; committed = false; heard = ''; wakeAt = -1;
+    if (mode === 'ptt') { micUI('rec', 'говорите… (пауза — отправлю)'); setState('listening', 'слушаю'); }
+    else if (mode === 'wake') { if (awake) micUI('rec', 'слушаю, босс'); else idleMicUI(); }
   };
   rec.onresult = (e) => {
     if (committed) return;
@@ -247,7 +347,8 @@ else {
 
     if (mode === 'wake' && !awake) {
       const m = [...heard.matchAll(new RegExp(WAKE.source, 'gi'))].pop();
-      if (!m) return;
+      if (!m) return;                 // not addressed to Эдит — ignore
+      if (speaking) stopSpeaking();   // barge-in: she goes quiet at once
       wakeUp(); wakeAt = m.index + m[0].length;
     } else if (mode === 'wake' && wakeAt < 0) {
       wakeAt = 0;
@@ -265,7 +366,7 @@ else {
   };
   rec.onerror = (e) => {
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-      mode = 'off'; listening = false; micUI('off', 'нет доступа к микрофону');
+      mode = 'off'; barge = null; listening = false; micGranted = false; micUI('off', 'нет доступа к микрофону');
       showBanner('Нет доступа к микрофону. В Chrome нажмите значок замка слева от адреса → Микрофон → Разрешить, затем обновите страницу.', 'обновить', () => location.reload());
     } else if (e.error === 'network') {
       showBanner('Распознавание речи не может связаться с сервером Google. Проверьте интернет/VPN.');
@@ -275,8 +376,8 @@ else {
     listening = false;
     // Chrome may end the session itself at a pause: treat it as "done"
     if (!committed && commandText()) { commit(); return; }
-    if (mode === 'wake' && !speaking && !busy) { setTimeout(startRec, 200); return; }
-    if (mode === 'ptt') { mode = 'off'; if (!busy) micUI('off', 'нажмите, чтобы говорить'); setState(busy ? 'thinking' : 'idle', busy ? 'обработка' : 'в режиме ожидания'); }
+    if (mode === 'wake' && (!busy || speaking)) { setTimeout(startRec, 200); return; }
+    if (mode === 'ptt') { mode = 'off'; idleMicUI(); if (!busy) setState('idle', 'в режиме ожидания'); }
   };
 }
 
@@ -288,33 +389,51 @@ function startRec() {
   try { rec.start(); } catch {}
 }
 
+function leaveBarge() { if (barge) { mode = barge.saved; barge = null; } }
+
 function commit() {
   if (committed) return;
   const cmd = commandText();
   committed = true; clearTimers(); awake = false;
   try { rec.abort(); } catch {}
-  if (mode === 'ptt') mode = 'off';
-  if (cmd.length < 2) { micUI(mode === 'wake' ? 'on' : 'off', mode === 'wake' ? 'скажите «Эдит»' : 'нажмите, чтобы говорить'); return; }
+  if (barge) leaveBarge(); else if (mode === 'ptt') mode = 'off';
+  idleMicUI();
+  if (cmd.length < 2) return;
   beepDone();
-  micUI(mode === 'wake' ? 'on' : 'off', mode === 'wake' ? 'скажите «Эдит»' : 'нажмите, чтобы говорить');
   send(punctuate(cmd));
 }
 
-function micPause(on) { // don't let Эдит hear herself
-  if (!rec) return;
-  if (on) { try { rec.abort(); } catch {} }
-  else if (mode === 'wake') setTimeout(startRec, 350);
+// While she speaks: listen only for "Эдит" (works once the mic was allowed).
+function onSpeakStart() {
+  speaking = true; setState('speaking', 'говорю');
+  if (!rec || !micGranted) return;
+  if (mode !== 'wake') { barge = { saved: mode }; mode = 'wake'; }
+  awake = false; wakeAt = -1; heard = ''; committed = false;
+  if (!listening) startRec(); else { try { rec.abort(); } catch {} } // fresh session, onend restarts it
+  idleMicUI();
+}
+function onSpeakEnd() {
+  speaking = false;
+  if (!busy) setState('idle', 'в режиме ожидания');
+  if (barge && !awake) { // finished without being interrupted
+    leaveBarge(); clearTimers();
+    if (mode !== 'wake') { try { rec.abort(); } catch {} }
+  }
+  if (mode === 'wake' && !listening) setTimeout(startRec, 300);
+  idleMicUI();
 }
 
 function wakeUp() {
   awake = true; beepListen();
-  micUI('rec', 'слушаю, босс'); setState('listening', 'слушаю, босс'); youEl.textContent = '…';
+  micUI('rec', 'слушаю, босс'); setState('listening', 'слушаю'); youEl.textContent = '…';
   clearTimeout(idleTimer);
   idleTimer = setTimeout(() => { // said "Эдит" but nothing after it
     if (committed || commandText()) return;
-    awake = false; wakeAt = -1;
+    awake = false; wakeAt = -1; heard = '';
+    leaveBarge();
     try { rec.abort(); } catch {}
-    if (!busy) { setState('idle', 'в режиме ожидания'); micUI('on', 'скажите «Эдит»'); youEl.textContent = ''; }
+    if (!busy) { setState('idle', 'в режиме ожидания'); youEl.textContent = ''; }
+    idleMicUI();
   }, WAKE_IDLE_MS);
 }
 
@@ -322,29 +441,30 @@ function wakeUp() {
 micBtn.addEventListener('click', () => {
   if (!rec) return;
   if (listening && mode === 'ptt') { // tap again = "I'm done", send now
-    if (commandText()) commit(); else { mode = 'off'; try { rec.abort(); } catch {} micUI('off', 'нажмите, чтобы говорить'); }
+    if (commandText()) commit(); else { mode = 'off'; try { rec.abort(); } catch {} idleMicUI(); }
     return;
   }
-  if (busy) return;
-  try { speechSynthesis.cancel(); } catch {}
+  stopSpeaking();
+  barge = null;
   try { rec.abort(); } catch {}
   clearTimers();
   mode = 'ptt'; awake = true; beepListen();
-  setTimeout(startRec, 120);
+  setTimeout(startRec, 150);
 });
 
 // hands-free toggle: continuous wake-word listening (needs one tap on the page
 // first — browser rule)
 function setWakeMode(on) {
-  if (on) { mode = 'wake'; awake = false; startRec(); micUI('on', 'скажите «Эдит»'); }
-  else { mode = 'off'; clearTimers(); try { rec && rec.abort(); } catch {} micUI('off', 'нажмите, чтобы говорить'); }
+  barge = null;
+  if (on) { mode = 'wake'; awake = false; startRec(); idleMicUI(); }
+  else { mode = 'off'; clearTimers(); try { rec && rec.abort(); } catch {} idleMicUI(); }
 }
 
 // ---------- in-HUD windows ----------
 let winCount = 0;
 function openWindow(w) {
   const el = document.createElement('div'); el.className = 'win';
-  const off = (winCount++ % 5) * 26; el.style.left = `calc(14% + ${off}px)`; el.style.top = `calc(16% + ${off}px)`;
+  const off = (winCount++ % 5) * 26; el.style.left = `calc(8% + ${off}px)`; el.style.top = `calc(14% + ${off}px)`;
   const bar = document.createElement('div'); bar.className = 'win-bar';
   const title = document.createElement('div'); title.className = 'win-title'; title.textContent = w.title || 'окно'; bar.appendChild(title);
   if (w.kind === 'web' && w.url) { const e = document.createElement('button'); e.className = 'win-x'; e.textContent = '↗'; e.onclick = () => window.open(w.url, '_blank', 'noopener'); bar.appendChild(e); }
@@ -372,7 +492,7 @@ const es = new EventSource('/api/events');
 es.onmessage = (e) => {
   const ev = JSON.parse(e.data);
   if (ev.type === 'hello') { brainLabel.textContent = ev.model; statBrain.className = 'stat on'; }
-  else if (ev.type === 'proactive') { captionEl.textContent = ev.text; addLog('edith', ev.text, 'edith proactive'); speak(ev.text); setState('speaking', 'инициатива'); setTimeout(() => !busy && setState('idle', 'в режиме ожидания'), 3500); }
+  else if (ev.type === 'proactive') { addMsg('edith', ev.text, 'proactive'); if (!busy) speak(ev.text); }
 };
 setInterval(() => { if (!document.hidden) fetch('/api/beat', { method: 'POST' }).catch(() => {}); }, 60000);
 
@@ -384,19 +504,17 @@ if (navigator.getBattery) navigator.getBattery().then((b) => {
   b.addEventListener('levelchange', check); b.addEventListener('chargingchange', check); check();
 }).catch(() => {});
 
-// ---------- settings / drawer wiring ----------
-$('#btn-log').onclick = () => $('#drawer').classList.add('open');
-$('#btn-log-close').onclick = () => $('#drawer').classList.remove('open');
+// ---------- settings ----------
 $('#btn-settings').onclick = () => { $('#settings').hidden = false; };
 $('#btn-settings-close').onclick = () => { $('#settings').hidden = true; };
 const bind = (id, key, after) => { const el = $(id); if (!el) return; el.checked = opts[key]; el.onchange = () => { opts[key] = el.checked; saveOpts(); after && after(); }; };
 bind('#opt-saymac', 'saymac');
 bind('#opt-wake', 'wake', () => setWakeMode(opts.wake));
-bind('#opt-speak', 'speak');
+bind('#opt-speak', 'speak', () => { if (!opts.speak) stopSpeaking(); });
 bind('#opt-proactive', 'proactive', () => fetch('/api/proactive', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: opts.proactive }) }));
 bind('#opt-eco', 'eco', applyEco);
 $('#voice-select').onchange = (e) => { opts.voiceURI = e.target.value; saveOpts(); chosenVoice = voices.find((v) => v.voiceURI === opts.voiceURI) || chosenVoice; };
-$('#voice-test').onclick = () => speak('Я Эдит. Всегда на связи, босс.');
+$('#voice-test').onclick = () => speak('Я на связи, босс. Говорю спокойно и по делу.');
 function syncOpts() { $('#opt-eco').checked = opts.eco; saveOpts(); }
 
 // ---------- boot ----------
@@ -406,8 +524,7 @@ function syncOpts() { $('#opt-eco').checked = opts.eco; saveOpts(); }
   setTimeout(() => { o.classList.add('done'); setTimeout(() => o.remove(), 700); }, 1600);
 })();
 
-// greeting. Mic needs one tap first (browser rule), so prompt for it.
+// greeting. The mic needs one tap first (browser rule).
 setState('idle', 'в режиме ожидания');
-captionEl.textContent = 'Системы в норме, босс.';
-addLog('edith', 'Системы в норме, босс. Нажмите микрофон и говорите.', 'edith');
-micUI('off', SR ? 'нажмите, чтобы говорить' : 'голос не работает (нужен Chrome)');
+addMsg('edith', 'Системы в норме, босс. Нажмите микрофон и говорите — или напишите здесь. Спросите «что ты умеешь?», если хотите знать мои возможности.');
+idleMicUI();
