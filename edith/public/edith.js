@@ -17,7 +17,7 @@ const opts = loadOpts();
 
 // ---------- settings persistence ----------
 function loadOpts() {
-  const def = { wake: false, speak: true, saymac: true, proactive: true, eco: true, eyes: true, voiceURI: '' };
+  const def = { wake: false, speak: true, saymac: true, proactive: true, notify: true, eco: true, eyes: true, voiceURI: '' };
   try { return { ...def, ...JSON.parse(localStorage.getItem('edith-opts') || '{}') }; } catch { return def; }
 }
 function saveOpts() { try { localStorage.setItem('edith-opts', JSON.stringify(opts)); } catch {} }
@@ -219,13 +219,27 @@ function loadVoices() {
 }
 if ('speechSynthesis' in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
 
+// Echo guard: the mic hears her own voice from the speakers. Anything that is
+// mostly the words she is saying (or just said) is her, not the boss.
+let spokenNow = '', spokenUntil = 0;
+const words = (t) => (String(t).toLowerCase().match(/[а-яёa-z0-9]{3,}/g) || []);
+function isEcho(text) {
+  if (!spokenNow || (!speaking && Date.now() > spokenUntil)) return false;
+  const heardW = words(text);
+  if (!heardW.length) return false;
+  const said = new Set(words(spokenNow));
+  const hits = heardW.filter((w) => said.has(w)).length;
+  return hits / heardW.length >= 0.5 && hits >= 2;
+}
+
 function speak(text) {
   const clean = speakable(text);
+  spokenNow = clean;
   if (!opts.speak || !clean) { if (mode === 'wake') setTimeout(startRec, 400); return; }
   stopSpeaking();
   const id = ++speechId;
   onSpeakStart();
-  const end = () => { if (id === speechId) onSpeakEnd(); };
+  const end = () => { if (id === speechId) { spokenUntil = Date.now() + 5000; onSpeakEnd(); } };
   if (opts.saymac) speakViaMac(clean, id, end);
   else speakViaBrowser(clean, id, end);
 }
@@ -267,7 +281,8 @@ const micBtn = $('#mic'), micText = $('#mic-text');
 const SILENCE_MS = 1300;      // pause that means "I'm done"
 const MAX_PHRASE_MS = 30000;  // safety cap for one phrase
 const WAKE_IDLE_MS = 8000;    // after "Эдит", wait this long for the command
-const WAKE = /(эдит|edith|едит|эдис|эдди|едить|идит)/i;
+// whole word only: «видите», «сидит», «победит» must not wake her up
+const WAKE = /(?:^|[^а-яёa-z])(эдит[аеуы]?|edith|едит|эдис|эдди)(?=$|[^а-яёa-z])/i;
 
 let rec = null, mode = 'off';  // 'off' | 'ptt' (tap-to-talk) | 'wake' (listen for "Эдит")
 let listening = false, awake = false, committed = false, micGranted = false;
@@ -399,6 +414,7 @@ function commit() {
   if (barge) leaveBarge(); else if (mode === 'ptt') mode = 'off';
   idleMicUI();
   if (cmd.length < 2) return;
+  if (isEcho(cmd)) { youEl.textContent = ''; return; } // her own voice — ignore
   beepDone();
   send(punctuate(cmd));
 }
@@ -419,7 +435,7 @@ function onSpeakEnd() {
     leaveBarge(); clearTimers();
     if (mode !== 'wake') { try { rec.abort(); } catch {} }
   }
-  if (mode === 'wake' && !listening) setTimeout(startRec, 300);
+  if (mode === 'wake' && !listening) setTimeout(startRec, 800);
   idleMicUI();
 }
 
@@ -492,8 +508,28 @@ const es = new EventSource('/api/events');
 es.onmessage = (e) => {
   const ev = JSON.parse(e.data);
   if (ev.type === 'hello') { brainLabel.textContent = ev.model; statBrain.className = 'stat on'; }
-  else if (ev.type === 'proactive') { addMsg('edith', ev.text, 'proactive'); if (!busy) speak(ev.text); }
+  else if (ev.type === 'proactive') { addMsg('edith', ev.text, 'proactive'); if (!busy && !speaking) speak(ev.text); }
+  else if (ev.type === 'notify') announce(ev.items);
+  else if (ev.type === 'notice') showBanner(ev.text);
 };
+
+// New messages / calls from any messenger (via macOS notifications).
+// Their text is someone else's data: shown as plain text, never as markup.
+function announce(items) {
+  for (const n of items) {
+    const el = addMsg('edith', '', 'notify' + (n.important ? ' important' : ''));
+    el.querySelector('.who span').textContent = (n.important ? 'важно · ' : 'входящее · ') + n.app;
+    el.querySelector('.body').textContent = [n.title, n.subtitle].filter(Boolean).join(' · ') + (n.body ? ': ' + n.body : '');
+  }
+  if (!opts.notify || !opts.speak || busy || speaking) return;
+  const n = items[items.length - 1];
+  let phrase;
+  if (items.length > 1) phrase = `Босс, у вас ${items.length} новых сообщения. Последнее — ${n.app}${n.title ? ', от ' + n.title : ''}.`;
+  else if (n.app === 'Звонок') phrase = `Босс, вам звонят${n.title ? ': ' + n.title : ''}.`;
+  else phrase = `Босс, ${n.important ? 'важное сообщение' : 'новое сообщение'} в ${n.app}${n.title ? ' от ' + n.title : ''}.`;
+  if (items.length === 1 && n.important && n.body) phrase += ' ' + n.body.slice(0, 200);
+  speak(phrase);
+}
 setInterval(() => { if (!document.hidden) fetch('/api/beat', { method: 'POST' }).catch(() => {}); }, 60000);
 
 // ---------- eco / visibility ----------
@@ -512,6 +548,7 @@ bind('#opt-saymac', 'saymac');
 bind('#opt-wake', 'wake', () => setWakeMode(opts.wake));
 bind('#opt-speak', 'speak', () => { if (!opts.speak) stopSpeaking(); });
 bind('#opt-proactive', 'proactive', () => fetch('/api/proactive', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: opts.proactive }) }));
+bind('#opt-notify', 'notify');
 bind('#opt-eco', 'eco', applyEco);
 $('#voice-select').onchange = (e) => { opts.voiceURI = e.target.value; saveOpts(); chosenVoice = voices.find((v) => v.voiceURI === opts.voiceURI) || chosenVoice; };
 $('#voice-test').onclick = () => speak('Я на связи, босс. Говорю спокойно и по делу.');

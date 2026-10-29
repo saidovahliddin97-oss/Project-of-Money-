@@ -60,10 +60,15 @@ function cool(p, err) {
 // Errors worth switching provider for (limits, auth, outages, network).
 const shouldFailover = (err) => !err.status || [401, 402, 403, 404, 408, 409, 429].includes(err.status) || err.status >= 500;
 
+// Conversations with mail/messages/screen never go to these providers
+// (free Gemini may use data to improve its products).
+const PRIVATE_EXCLUDE = new Set((process.env.EDITH_PRIVATE_EXCLUDE ?? 'gemini').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean));
+
 function orderedProviders(need = {}) {
   const now = Date.now();
   let list = chain();
   if (need.vision) list = list.filter((p) => p.vision);
+  if (need.private) list = list.filter((p) => !PRIVATE_EXCLUDE.has(p.provider));
   const ready = list.filter((p) => (cooldownUntil.get(p.id) || 0) <= now);
   // Everyone cooling down: try them anyway, soonest-to-recover first.
   return ready.length ? ready : [...list].sort((a, b) => (cooldownUntil.get(a.id) || 0) - (cooldownUntil.get(b.id) || 0));
@@ -139,14 +144,15 @@ async function request(body, stream, need = {}) {
       cool(p, e);
     }
   }
+  if (!errors.length && need.private) throw new Error('Для личных данных нет подходящей модели: все разрешённые недоступны (Gemini для писем и сообщений отключён ради приватности).');
   if (!errors.length) throw new Error(need.vision ? 'Нет модели со зрением: подключите Gemini (GEMINI_API_KEY) или облачную модель Ollama.' : 'Не настроено ни одного провайдера.');
   throw new Error('Все модели сейчас недоступны:\n' + errors.join('\n'));
 }
 
 /** Непотоковый вызов. Возвращает строку-ответ. */
-export async function chat(messages, { system, max_tokens = 300, temperature = 0.6, vision = false } = {}) {
+export async function chat(messages, { system, max_tokens = 300, temperature = 0.6, vision = false, private: priv = false } = {}) {
   const msgs = system ? [{ role: 'system', content: system }, ...messages] : messages;
-  const { res } = await request({ messages: msgs, max_tokens, temperature }, false, { vision });
+  const { res } = await request({ messages: msgs, max_tokens, temperature }, false, { vision, private: priv });
   const data = await res.json();
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
@@ -155,12 +161,12 @@ export async function chat(messages, { system, max_tokens = 300, temperature = 0
  * Потоковый вызов с инструментами. onText(delta) на каждый кусок текста.
  * Возвращает { content, tool_calls, finish_reason, provider }.
  */
-export async function streamChat({ messages, system, tools, max_tokens = 1024, temperature = 0.6 }, onText) {
+export async function streamChat({ messages, system, tools, max_tokens = 1024, temperature = 0.6, private: priv = false }, onText) {
   const msgs = system ? [{ role: 'system', content: system }, ...messages] : messages;
   const body = { messages: msgs, max_tokens, temperature };
   if (tools?.length) { body.tools = tools; body.tool_choice = 'auto'; }
 
-  const { res, provider } = await request(body, true);
+  const { res, provider } = await request(body, true, { private: priv });
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buf = '';
@@ -206,5 +212,5 @@ export async function describeImage(dataUrl, question, { system } = {}) {
   return chat([{ role: 'user', content: [
     { type: 'text', text: question },
     { type: 'image_url', image_url: { url: dataUrl } },
-  ] }], { system, max_tokens: 500, temperature: 0.2, vision: true });
+  ] }], { system, max_tokens: 500, temperature: 0.2, vision: true, private: true });
 }
