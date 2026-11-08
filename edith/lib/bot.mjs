@@ -69,8 +69,14 @@ function trim(h) {
 }
 
 // ---------- voice → text (free Groq Whisper) ----------
+// A key added to edith/.env while Эдит runs is picked up without a restart.
+function envKey(name) {
+  if (!process.env[name]) { try { process.loadEnvFile(path.join(HERE, '..', '.env')); } catch {} }
+  return process.env[name];
+}
+
 async function transcribe(buf) {
-  const key = process.env.GROQ_API_KEY;
+  const key = envKey('GROQ_API_KEY');
   if (!key) throw new Error('Голосовые я пойму, если подключить бесплатный ключ Groq: впишите GROQ_API_KEY в edith/.env (ключ на console.groq.com). Пока пишите текстом.');
   const fd = new FormData();
   fd.append('file', new Blob([buf], { type: 'audio/ogg' }), 'voice.ogg');
