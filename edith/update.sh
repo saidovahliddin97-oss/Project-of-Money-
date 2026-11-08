@@ -16,8 +16,21 @@ note() { command -v osascript >/dev/null && osascript -e "display notification \
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
-if ! curl -sfL -o "$TMP/e.zip" "$URL" || ! unzip -q "$TMP/e.zip" -d "$TMP"; then
-  note "Не удалось скачать обновление — проверьте интернет/VPN"; exit 1
+
+# GitHub from Russia is often throttled: try both addresses, retry, and show the real error.
+MIRROR="https://codeload.github.com/saidovahliddin97-oss/Project-of-Money-/zip/refs/heads/claude/admiring-franklin-ognj19"
+echo "Скачиваю обновление…"
+GOT=0
+for U in "$URL" "$MIRROR"; do
+  if curl -fSL --retry 3 --retry-delay 2 --connect-timeout 20 --max-time 300 -o "$TMP/e.zip" "$U" 2>"$TMP/err"; then GOT=1; break; fi
+done
+if [ "$GOT" != 1 ]; then
+  echo "Ошибка: $(tail -1 "$TMP/err")"
+  note "Не удалось скачать обновление с GitHub. Включите VPN и запустите ещё раз."; exit 1
+fi
+if ! unzip -q "$TMP/e.zip" -d "$TMP" 2>"$TMP/err"; then
+  echo "Ошибка: $(tail -1 "$TMP/err")"
+  note "Архив скачался не полностью — запустите обновление ещё раз."; exit 1
 fi
 NEW="$(ls -d "$TMP"/Project-of-Money-* | head -1)"
 
@@ -26,7 +39,8 @@ PORT="${PORT:-4330}"
 WAS_RUNNING=0
 curl -s -o /dev/null --max-time 1 "http://localhost:$PORT" && WAS_RUNNING=1
 
-[ -f "$APP/edith/.env" ] && cp "$APP/edith/.env" "$NEW/edith/.env"
+[ -f "$APP/edith/.env" ] && cp -p "$APP/edith/.env" "$NEW/edith/.env"
+[ -f "$APP/edith/.bot-history.json" ] && cp -p "$APP/edith/.bot-history.json" "$NEW/edith/.bot-history.json"
 pkill -f "node .*edith/server\.mjs"
 mkdir -p "$(dirname "$APP")"
 rm -rf "$APP" && mv "$NEW" "$APP" && chmod +x "$APP"/edith/*.sh
