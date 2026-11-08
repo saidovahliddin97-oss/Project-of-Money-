@@ -11,3 +11,5 @@ tests/e2e/output/
 *.log
 .DS_Store
 dist/
+edith/.bot-history.json
+edith/npm.log

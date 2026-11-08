@@ -2,6 +2,7 @@
 // Одноразовое подключение аккаунтов к Эдит. Запуск в Терминале:
 //   node ~/EDITH/app/edith/connect.mjs gmail      — вся почта Gmail
 //   node ~/EDITH/app/edith/connect.mjs telegram   — личный Telegram
+//   node ~/EDITH/app/edith/connect.mjs bot        — Telegram-бот «Эдит»
 // Данные проверяются входом и только потом сохраняются в edith/.env (права 600:
 // читать файл можете только вы). Никуда, кроме Google/Telegram, они не уходят.
 
@@ -84,7 +85,45 @@ async function telegram() {
   finally { await client.disconnect().catch(() => {}); process.exit(process.exitCode || 0); }
 }
 
+async function bot() {
+  say('', '=== Telegram-бот «Эдит» ===', '',
+    'Создайте отдельного бота (не трогайте бота продаж):',
+    '  в Telegram откройте @BotFather → /newbot → имя (например, Эдит) → адрес, оканчивающийся на bot.',
+    '  BotFather пришлёт токен — длинную строку вида 1234567890:AA…', '');
+  const token = await ask('Токен нового бота (ввод скрыт): ', { hidden: true });
+  const { tg } = await import('./lib/bot.mjs');
+  let me;
+  try { me = await tg(token, 'getMe', {}, 20000); }
+  catch (e) { say('Токен не подошёл: ' + e.message); process.exit(1); }
+  // never hijack a bot that already delivers to a website (e.g. the sales bot)
+  const hook = await tg(token, 'getWebhookInfo', {}, 20000).catch(() => ({}));
+  if (hook.url) {
+    say(`Этот бот уже работает на сайте (${hook.url}) — похоже, это бот продаж.`, 'Его я не трогаю. Создайте нового бота в @BotFather и запустите команду ещё раз.');
+    process.exit(1);
+  }
+  say('', `Откройте в Telegram https://t.me/${me.username} и нажмите «Start» (или напишите что угодно).`, 'Жду до 3 минут…');
+  let offset = 0, owner = null;
+  const until = Date.now() + 180000;
+  try { const old = await tg(token, 'getUpdates', { offset: -1, timeout: 0 }, 20000); if (old.length) offset = old[old.length - 1].update_id + 1; } catch {}
+  while (!owner && Date.now() < until) {
+    const ups = await tg(token, 'getUpdates', { offset, timeout: 30, allowed_updates: ['message'] }, 40000).catch(() => []);
+    for (const u of ups) {
+      offset = u.update_id + 1;
+      if (u.message?.chat?.type === 'private') { owner = u.message.from; break; }
+    }
+  }
+  if (!owner) { say('Не дождалась сообщения. Запустите команду ещё раз.'); process.exit(1); }
+  const name = [owner.first_name, owner.last_name].filter(Boolean).join(' ') + (owner.username ? ` (@${owner.username})` : '');
+  const yes = (await ask(`Написал(а): ${name}. Это вы? (да/нет): `)).toLowerCase();
+  if (!/^(д|y)/.test(yes)) { say('Хорошо, ничего не сохраняю.'); process.exit(1); }
+  await tg(token, 'getUpdates', { offset, timeout: 0 }, 20000).catch(() => {}); // mark handled
+  await saveEnv({ EDITH_BOT_TOKEN: token, EDITH_BOT_OWNER: String(owner.id) });
+  await tg(token, 'sendMessage', { chat_id: owner.id, text: 'Готово, босс. Бот подключён. Перезапустите Эдит — и я начну отвечать здесь.' }, 20000).catch(() => {});
+  say('', `Готово: бот @${me.username} будет отвечать только вам.`, 'Перезапустите Эдит кнопкой (или: bash ~/EDITH/app/edith/stop.sh, затем кнопка «Эдит»).');
+}
+
 const what = (process.argv[2] || '').toLowerCase();
 if (what === 'gmail') await gmail();
 else if (what === 'telegram') await telegram();
-else say('Использование:', '  node connect.mjs gmail', '  node connect.mjs telegram');
+else if (what === 'bot') await bot();
+else say('Использование:', '  node connect.mjs bot        — Telegram-бот «Эдит»', '  node connect.mjs gmail      — вся почта Gmail', '  node connect.mjs telegram   — личный Telegram');

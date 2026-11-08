@@ -306,9 +306,9 @@ const SENDS = new Set(['mail_send', 'imessage_send', 'whatsapp_send', 'gmail_sen
 export const PRIVATE_TOOLS = new Set(['notifications_read', 'mail_list', 'mail_search', 'mail_read', 'imessage_read', 'gmail_list', 'gmail_search', 'gmail_read', 'tg_chats', 'tg_find', 'tg_read']);
 export const commsSensitive = (name) => SENDS.has(name);
 export function commsDescribe(name, i = {}) {
-  if (name === 'mail_send') return `отправить письмо на ${i.to} — тема «${clip(i.subject || '', 80)}»: «${clip(i.body || '', 200)}»`;
+  if (name === 'mail_send') return `отправить письмо на ${i.to}${i.subject ? ` — тема «${clip(i.subject, 80)}»` : ''}: «${clip(i.body || '', 200)}»`;
   if (name === 'imessage_send') return `отправить iMessage на ${i.to}: «${clip(i.text || '', 200)}»`;
-  if (name === 'gmail_send') return `отправить письмо с Gmail на ${i.to}${i.reply_to_id ? ' (ответ)' : ''} — тема «${clip(i.subject || '', 80)}»: «${clip(i.body || '', 200)}»`;
+  if (name === 'gmail_send') return `отправить письмо с Gmail на ${i.to}${i.reply_to_id ? ' (ответ)' : ''}${i.subject ? ` — тема «${clip(i.subject, 80)}»` : ''}: «${clip(i.body || '', 200)}»`;
   if (name === 'tg_send') return `написать в Telegram «${i.chat}»: «${clip(i.text || '', 200)}»`;
   if (name === 'whatsapp_send') return `отправить в WhatsApp на ${i.phone}: «${clip(i.text || '', 200)}»`;
   return name;

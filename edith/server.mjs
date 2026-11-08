@@ -11,6 +11,7 @@ import { streamChat, describeImage, MODEL_LABEL, config, chain } from './lib/llm
 import { runAction, captureScreen, sayText as speakOnMac, hushText, describe, isSensitive, enabledActions } from './lib/computer.mjs';
 import { webSearch } from './lib/search.mjs';
 import { Proactive } from './lib/proactive.mjs';
+import { startBot, botReady } from './lib/bot.mjs';
 import { commsTools, COMMS_NAMES, PRIVATE_TOOLS, commsSensitive, commsDescribe, runComms, readNotifications, latestNotificationId, isPeopleApp, isImportant, FDA_HINT } from './lib/comms.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -117,7 +118,9 @@ function argsOf(toolCall) {
 function sseHead(res) {
   res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', connection: 'keep-alive' });
 }
-const sse = (res, obj) => res.write(`data: ${JSON.stringify(obj)}\n\n`);
+// Events go to the browser (SSE) or to any other sink with an event() method
+// (the Telegram bot).
+const sse = (res, obj) => (typeof res.event === 'function' ? res.event(obj) : res.write(`data: ${JSON.stringify(obj)}\n\n`));
 
 // Run the agent loop, streaming to the SSE response. `messages` is the full
 // history (client-owned, OpenAI format). Returns when it needs confirmation
@@ -149,6 +152,16 @@ async function attachScreen(res, messages) {
   } catch (e) {
     sse(res, { type: 'status', text: 'экран недоступен' });
   }
+}
+
+// The boss answered the confirm card: run approved calls, refuse the rest, continue.
+async function resumeAfterConfirm(res, messages, approvals) {
+  const last = messages[messages.length - 1];
+  for (const tc of last?.tool_calls || []) {
+    const approved = !sensitive(tc.function.name) || approvals?.[tc.id] === true;
+    messages.push(await execToResult(res, tc, approved));
+  }
+  await runLoop(res, messages);
 }
 
 async function runLoop(res, messages) {
@@ -288,13 +301,7 @@ const server = http.createServer(async (req, res) => {
       const { messages, approvals } = await readBody(req);
       proactive.touch('message');
       sseHead(res);
-      const last = messages[messages.length - 1];
-      const toolCalls = last?.tool_calls || [];
-      for (const tc of toolCalls) {
-        const approved = !sensitive(tc.function.name) || approvals?.[tc.id] === true;
-        messages.push(await execToResult(res, tc, approved));
-      }
-      await runLoop(res, messages);
+      await resumeAfterConfirm(res, messages, approvals);
       res.end();
       return;
     }
@@ -365,6 +372,14 @@ setInterval(async () => {
   if (!line) return;
   for (const res of eventClients) { try { sse(res, { type: 'proactive', text: line }); } catch {} }
 }, 60 * 1000);
+
+// Telegram bot «Эдит»: the boss writes or speaks from any device.
+if (botReady()) {
+  startBot({
+    turn: (sink, messages) => runLoop(sink, messages),
+    resume: (sink, messages, approvals) => resumeAfterConfirm(sink, messages, approvals),
+  });
+}
 
 server.listen(PORT, '127.0.0.1', () => {
   const list = chain().map((p) => p.id);
